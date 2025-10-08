@@ -2,14 +2,16 @@ name: Amber Loop
 on:
   push:
     paths:
-      - "server.py"
-      - "amber_api.py"
       - ".github/workflows/amber-loop.yml"
       - "requirements.txt"
+      - "**/*.py"
   workflow_dispatch:
 
 permissions:
   contents: write
+
+env:
+  APP_MODULE: server:app          # <-- change to main:app or app:app if your file differs
 
 jobs:
   loop:
@@ -23,59 +25,70 @@ jobs:
 
       - name: Install deps
         run: |
+          set -e
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          sudo apt-get update
-          sudo apt-get install -y jq
+          pip install -r requirements.txt || true
+          # ensure these exist even if requirements.txt missed them
+          pip install fastapi "uvicorn[standard]" pynacl python-dotenv || true
+          sudo apt-get update && sudo apt-get install -y jq
 
       - name: Launch API
         env:
-          DEV_SEED: dev-seed-change-me-32bytes________
-          ISSUER_DID: did:web:openline.local
+          APP_MODULE: ${{ env.APP_MODULE }}
         run: |
-          nohup uvicorn server:app --host 127.0.0.1 --port 8787 >/tmp/app.log 2>&1 &
-          # Wait until health returns 200
+          set -Eeuo pipefail
+          # 1) sanity-check import of APP_MODULE (fails fast with message)
+          python - <<'PY'
+          import importlib, os, sys
+          mod, attr = os.environ.get('APP_MODULE','server:app').split(':',1)
+          try:
+              m = importlib.import_module(mod)
+              app = getattr(m, attr, None)
+              assert app is not None, f"{mod}:{attr} not found"
+          except Exception as e:
+              print(f"❌ Import failed for {mod}:{attr} -> {e}")
+              sys.exit(2)
+          print(f"✅ Import OK: {mod}:{attr}")
+          PY
+
+          # 2) start uvicorn and wait for /health
+          nohup python -m uvicorn "$APP_MODULE" --host 127.0.0.1 --port 8787 >/tmp/app.log 2>&1 &
           for i in {1..40}; do
             if curl -sf http://127.0.0.1:8787/health >/dev/null; then
               echo "API is up"; break
             fi
+            # if process died, show logs and bail
+            if ! ps aux | grep -q "[u]vicorn.*8787"; then
+              echo "❌ Uvicorn exited early. Recent logs:"; tail -n +1 /tmp/app.log; exit 7
+            fi
             sleep 0.5
           done
-          curl -s http://127.0.0.1:8787/health; echo
+          echo "---- tail /tmp/app.log ----"
+          tail -n 50 /tmp/app.log || true
 
       - name: Amber → Eval → Label → Promote
-        env:
-          BASE: http://127.0.0.1:8787
+        env: { BASE: http://127.0.0.1:8787 }
         run: |
           set -Eeuo pipefail
-
           echo "Capture Amber"
-          AR_JSON=$(curl -sS -f "$BASE/api/amber/capture" \
-            -H 'content-type: application/json' \
+          AR_JSON=$(curl -sS -f "$BASE/api/amber/capture" -H 'content-type: application/json' \
             --data '{"flags":["amber:unconfirmed"],"metrics":{"unconfirmed_ratio":0.42},"digests":{"claim_graph_hash":"x"}}' | tee /tmp/ar.json)
-          AR=$(jq -er '.receipt.rid' /tmp/ar.json)
-          echo "AR=$AR"
+          AR=$(jq -er '.receipt.rid' /tmp/ar.json); echo "AR=$AR"
 
           echo "Eval"
-          EVR_JSON=$(curl -sS -f "$BASE/api/amber/eval" \
-            -H 'content-type: application/json' \
+          EVR_JSON=$(curl -sS -f "$BASE/api/amber/eval" -H 'content-type: application/json' \
             --data "{\"parent\":\"$AR\",\"tests\":[{\"name\":\"consistency\",\"pass\":true}]}" | tee /tmp/evr.json)
-          EVR=$(jq -er '.receipt.rid' /tmp/evr.json)
-          echo "EVR=$EVR"
+          EVR=$(jq -er '.receipt.rid' /tmp/evr.json); echo "EVR=$EVR"
 
           echo "Label"
-          LBR_JSON=$(curl -sS -f "$BASE/api/amber/label" \
-            -H 'content-type: application/json' \
+          LBR_JSON=$(curl -sS -f "$BASE/api/amber/label" -H 'content-type: application/json' \
             --data "{\"parent\":\"$AR\",\"label\":{\"verdict\":\"correct\",\"reason_codes\":[\"retrieval-agreement↑\"]}}" | tee /tmp/lbr.json)
-          LBR=$(jq -er '.receipt.rid' /tmp/lbr.json)
-          echo "LBR=$LBR"
+          LBR=$(jq -er '.receipt.rid' /tmp/lbr.json); echo "LBR=$LBR"
 
           echo "Promote"
-          GPR_JSON=$(curl -sS -f "$BASE/api/amber/promote" \
-            -H 'content-type: application/json' \
+          GPR_JSON=$(curl -sS -f "$BASE/api/amber/promote" -H 'content-type: application/json' \
             --data "{\"parent\":\"$AR\",\"basis\":{\"label_ref\":\"$LBR\",\"eval_refs\":[\"$EVR\"]},\"policy_checks\":{\"pii\":\"pass\",\"consent\":\"pass\"}}" | tee /tmp/gpr.json)
-          GPR=$(jq -er '.receipt.rid' /tmp/gpr.json)
-          echo "GPR=$GPR"
+          GPR=$(jq -er '.receipt.rid' /tmp/gpr.json); echo "GPR=$GPR"
 
       - name: Commit receipts to docs/
         if: always()
@@ -85,7 +98,7 @@ jobs:
           mkdir -p docs/receipts/amber docs/receipts/eval docs/receipts/label docs/receipts/promote
           git add docs/receipts docs/receipt.latest.json || true
           git commit -m "chore(ci): publish latest receipt chain" || echo "nothing to commit"
-          git push || echo "no push"
+          git push || true
 
       - name: Warn if Amber without Gold
         run: |
