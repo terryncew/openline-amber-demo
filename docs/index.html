@@ -34,29 +34,27 @@
   .k{color:var(--muted)}
   .v code{background:#0d1117;border:1px solid #1f2937;padding:2px 6px;border-radius:6px}
   .muted{color:var(--muted)}
-  .btnrow{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}
+  .btnrow{display:flex;flex-wrap:wrap;gap:14px;margin-top:8px}
   button,.btn{
     appearance:none;border:none;cursor:pointer;border-radius:12px;
     padding:14px 18px;font-weight:700;letter-spacing:.2px;
-    background:#1b2330;color:#e5e7eb;border:1px solid #273142;min-width:160px
+    background:#1b2330;color:#e5e7eb;border:1px solid #273142;min-width:180px;min-height:48px
   }
+  .btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
   button.primary{background:#1d4ed8;border-color:#1e3a8a}
-  button.warn{background:#7c2d12;border-color:#a16207}
   button.secondary{background:#111827;border-color:#253041}
-  button:active{transform:translateY(1px)}
+  button:active,.btn:active{transform:translateY(1px)}
   .good{color:#86efac}.warnc{color:#fde68a}.err{color:#fb7185}
   .side{position:sticky;top:20px}
   .side .box{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px}
   .side label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
-  input[type="text"]{width:100%;background:#0d1117;border:1px solid #253041;color:#e5e7eb;border-radius:10px;padding:12px 12px}
+  input[type="text"],select{width:100%;background:#0d1117;border:1px solid #253041;color:#e5e7eb;border-radius:10px;padding:12px 12px}
   .small{font-size:12px;color:var(--muted)}
   .list{margin-top:10px;display:flex;flex-direction:column;gap:8px}
   .item{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#0e1218}
   .tag{font-size:11px;padding:2px 8px;border:1px solid #334155;border-radius:999px;color:#cbd5e1}
-  .status{font-size:12px;margin-left:6px}
   .sep{height:1px;background:var(--border);margin:14px 0}
   a{color:var(--accent);text-decoration:none}
-  .foot{margin-top:26px;font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -94,9 +92,9 @@
       <div class="kv"><div class="k">Verify</div>
         <div class="v">
           <div class="btnrow">
-            <button id="verifyBtn" class="primary">Verify signature</button>
-            <a id="downloadBtn" class="btn secondary" download>Download JSON</a>
-            <button id="copyBtn" class="secondary">Copy link</button>
+            <button id="verifyBtn" class="primary" aria-label="Verify signature">Verify signature</button>
+            <a id="downloadBtn" class="btn secondary" download aria-label="Download receipt JSON">Download JSON</a>
+            <button id="copyBtn" class="secondary" aria-label="Copy link to this receipt">Copy link</button>
           </div>
           <div id="verifyStatus" class="small" style="margin-top:8px"></div>
         </div>
@@ -106,14 +104,14 @@
     <aside class="side">
       <div class="box">
         <strong>Load a receipt</strong>
-        <label>Source</label>
+        <label for="sourceSel">Source</label>
         <select id="sourceSel">
           <option value="latest">Latest (receipt.latest.json)</option>
           <option value="pick">Pick from index (if present)</option>
           <option value="custom">Enter path</option>
         </select>
         <div id="customWrap" style="display:none">
-          <label>Path (relative to /docs/)</label>
+          <label for="customPath">Path (relative to /docs/)</label>
           <input type="text" id="customPath" placeholder="receipts/amber/ar_2025-...json" />
           <div class="btnrow" style="margin-top:8px"><button id="loadCustom" class="secondary">Load</button></div>
         </div>
@@ -125,16 +123,12 @@
         <strong>Public key</strong>
         <div class="small">Verification looks for <code>issuer.pub.json</code> (ed25519 hex). If missing, we’ll show how to add it.</div>
       </div>
-
-      <div class="foot">
-        Built for clarity (Gates), delight (Jobs), and boldness (Knight). All verification runs locally.
-      </div>
     </aside>
   </div>
 </div>
 
 <script>
-/* Minimal tweetnacl (ed25519) import — via cdn is fine on Pages */
+/* Minimal tweetnacl (ed25519) import */
 const loadNaCl = () => new Promise((res, rej) => {
   const s=document.createElement('script');
   s.src='https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl-fast.min.js';
@@ -144,7 +138,7 @@ const loadNaCl = () => new Promise((res, rej) => {
 });
 
 const $ = (id)=>document.getElementById(id);
-const state = { receipt:null, pubkeyHex:null, base:'', hasIndex:false, index:null };
+const state = { receipt:null, pubkeyHex:null, base:'', hasIndex:false, index:null, currentHref:null };
 
 function setPill(badge, kind){
   const pill = $('pill');
@@ -175,7 +169,6 @@ function render(rec){
   $('kind').textContent = rec.what?.kind || '—';
   $('flags').textContent = (rec.flags && rec.flags.length)? rec.flags.join(', ') : '—';
   $('sigcode').textContent = (rec.sig||'').slice(0,20)+'…';
-  // optional blocks
   if(rec.metrics){ $('metricsRow').style.display='grid'; $('metrics').textContent = Object.entries(rec.metrics).map(([k,v])=>`${k}=${v}`).join(' · ');}
   else { $('metricsRow').style.display='none'; }
   if(rec.basis || rec.policy_checks){
@@ -184,7 +177,6 @@ function render(rec){
     const b2 = rec.policy_checks? ' | checks: ' + Object.entries(rec.policy_checks).map(([k,v])=>`${k}:${v}`).join(', ') : '';
     $('basis').textContent = (b1+b2).trim() || '—';
   } else { $('basisRow').style.display='none'; }
-  // buttons
   $('verifyStatus').textContent='';
   const dl = $('downloadBtn'); dl.href = state.currentHref || (state.base + 'receipt.latest.json');
   const cp = $('copyBtn'); cp.onclick = ()=>{ navigator.clipboard.writeText(dl.href).then(()=>{ $('verifyStatus').textContent='Link copied.'}) };
@@ -242,10 +234,12 @@ async function tryLoadPub(){
 async function verify(){
   const el = $('verifyStatus');
   el.textContent = 'Verifying…';
-  if(!state.pubkeyHex){ el.innerHTML = 'Missing public key. Add <code>docs/issuer.pub.json</code> like:<br><code>{ "issuer": "did:web:openline.local", "ed25519_public_key_hex": "ABCDEF..." }</code>'; return; }
+  if(!state.pubkeyHex){
+    el.innerHTML = 'Missing public key. Add <code>docs/issuer.pub.json</code> like:<br><code>{ "issuer": "did:web:openline.local", "ed25519_public_key_hex": "ABCDEF..." }</code>';
+    return;
+  }
   const rec = {...state.receipt}; if(!rec || !rec.sig){ el.textContent='No signature found.'; return; }
-  const sigHex = rec.sig; delete rec.sig;
-  // canonicalize: sort keys recursively, no spaces
+  const sigHex = String(rec.sig).replace(/^ed25519:/,''); delete rec.sig;
   const canonical = JSON.stringify(sortKeysDeep(rec));
   try{
     await loadNaCl();
@@ -291,12 +285,9 @@ $('loadCustom').onclick = ()=>{
 
 // boot
 (async function init(){
-  // Pages serves this file at /<repo>/ — detect base path to /docs/
-  // When using Pages root as /, files live at same path; we keep relative links.
   state.base = ''; // same folder as index.html
   await Promise.all([tryLoadIndex(), tryLoadPub()]);
   await loadLatest().catch(err=>{
-    // fallback messaging
     render({rid:'—',when:null,issuer:'—',what:{badge:'amber',kind:'case'},flags:['—'],sig:''});
     $('verifyStatus').innerHTML = '<span class="err">Could not load receipt.latest.json</span>';
     console.error(err);
