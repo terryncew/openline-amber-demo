@@ -4,83 +4,103 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Receipts Viewer — Amber → Gold</title>
+<meta name="color-scheme" content="dark">
 <style>
   :root{
-    --bg:#0b0c0f; --card:#111317; --muted:#6b7280; --text:#e5e7eb;
+    --bg:#0b0c0f; --card:#10131a; --muted:#94a3b8; --text:#e5e7eb;
     --ok:#16a34a; --warn:#f59e0b; --gold:#d4af37; --err:#ef4444; --accent:#60a5fa;
-    --border:#1f242c; --pill:#0f1720; --shadow:0 12px 30px rgba(0,0,0,.35);
+    --border:#1f2632; --pill:#0f1720; --shadow:0 10px 28px rgba(0,0,0,.28);
   }
-  html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
-  .wrap{max-width:980px;margin:0 auto;padding:28px 18px 64px}
-  header{display:flex;gap:18px;align-items:center;justify-content:space-between;margin-bottom:18px}
-  .brand{display:flex;gap:12px;align-items:center}
-  .dot{width:11px;height:11px;border-radius:50%;background:linear-gradient(135deg,#60a5fa,#a78bfa)}
-  h1{font-size:20px;margin:0}
-  .sub{color:var(--muted);font-size:14px;margin-top:2px}
-  .hero{background:linear-gradient(180deg,rgba(96,165,250,.12),transparent 60%);border:1px solid var(--border);border-radius:14px;padding:16px 16px;margin:8px 0 18px}
-  .hero p{margin:0;color:#c9d4e3}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);
+    font:16px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+  .wrap{max-width:1024px;margin:0 auto;padding:28px 16px 56px}
+  header{display:flex;gap:14px;align-items:center;justify-content:space-between;margin-bottom:14px}
+  h1{font-size:22px;margin:0}
+  .sub{color:var(--muted);font-size:14px}
+  .hero{background:linear-gradient(180deg,rgba(96,165,250,.14),transparent 60%);
+    border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin:8px 0 16px}
+  .hero b{color:#cfe1ff}
   .grid{display:grid;grid-template-columns:1fr;gap:16px}
-  @media(min-width:900px){.grid{grid-template-columns:1fr 320px}}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow)}
-  .card .hd{display:flex;justify-content:space-between;align-items:center;padding:16px;border-bottom:1px solid var(--border)}
-  .pill{display:inline-flex;gap:8px;align-items:center;background:var(--pill);border:1px solid var(--border);border-radius:999px;padding:6px 10px;font-weight:600;font-size:12px;letter-spacing:.2px}
-  .badge-green{color:#86efac;border-color:#14532d;background:rgba(22,163,74,.07)}
+  @media(min-width:940px){.grid{grid-template-columns:1.1fr 340px}}
+  .card{background:var(--card);border:1px solid var(--border);
+    border-radius:16px;box-shadow:var(--shadow)}
+  .hd{display:flex;justify-content:space-between;align-items:center;
+    padding:14px 16px;border-bottom:1px solid var(--border)}
+  .pill{display:inline-flex;gap:8px;align-items:center;background:var(--pill);
+    border:1px solid var(--border);border-radius:999px;padding:6px 10px;
+    font-weight:700;font-size:12px;letter-spacing:.2px}
+  .badge-green{color:#86efac;border-color:#14532d;background:rgba(22,163,74,.09)}
   .badge-amber{color:#fde68a;border-color:#7c580b;background:rgba(245,158,11,.10)}
   .badge-gold{color:#f9e8b2;border-color:#7a5f18;background:rgba(212,175,55,.10)}
   .badge-eval{color:#93c5fd;border-color:#1e3a8a;background:rgba(59,130,246,.10)}
   .badge-label{color:#c7d2fe;border-color:#312e81;background:rgba(99,102,241,.10)}
-  .kv{display:grid;grid-template-columns:160px 1fr;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border)}
+  .kv{display:grid;grid-template-columns:150px 1fr;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)}
   .kv:last-child{border-bottom:none}
   .k{color:var(--muted)}
-  .v code{background:#0d1117;border:1px solid #1f2937;padding:2px 6px;border-radius:6px}
-  .muted{color:var(--muted)}
-  .btnrow{display:flex;flex-wrap:wrap;gap:14px;margin-top:8px}
-  button,.btn{
-    appearance:none;border:none;cursor:pointer;border-radius:12px;
-    padding:14px 18px;font-weight:700;letter-spacing:.2px;
-    background:#1b2330;color:#e5e7eb;border:1px solid #273142;min-width:180px;min-height:48px
+  .v code{background:#0b1220;border:1px solid #1f2937;padding:2px 6px;border-radius:6px}
+  .btnrow{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}
+  .btn{
+    appearance:none;border:none;cursor:pointer;border-radius:14px;
+    padding:16px 18px;font-weight:800;letter-spacing:.25px;min-width:180px;
+    background:#111827;color:#e5e7eb;border:1px solid #273142;touch-action:manipulation
   }
-  .btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
-  button.primary{background:#1d4ed8;border-color:#1e3a8a}
-  button.secondary{background:#111827;border-color:#253041}
-  button:active,.btn:active{transform:translateY(1px)}
+  .btn.primary{background:#1e40af;border-color:#1e3a8a}
+  .btn.secondary{background:#0f172a;border-color:#233044}
+  .btn:active{transform:translateY(1px)}
   .good{color:#86efac}.warnc{color:#fde68a}.err{color:#fb7185}
-  .side{position:sticky;top:20px}
-  .side .box{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px}
-  .side label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
-  input[type="text"],select{width:100%;background:#0d1117;border:1px solid #253041;color:#e5e7eb;border-radius:10px;padding:12px 12px}
+  .side{position:sticky;top:18px}
+  .box{background:var(--card);border:1px solid var(--border);
+    border-radius:14px;padding:14px}
   .small{font-size:12px;color:var(--muted)}
+  select,input[type="text"]{width:100%;background:#0b1220;border:1px solid #253041;
+    color:#e5e7eb;border-radius:10px;padding:12px 12px;font-size:14px}
   .list{margin-top:10px;display:flex;flex-direction:column;gap:8px}
-  .item{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#0e1218}
+  .item{display:flex;justify-content:space-between;align-items:center;
+    padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#0c121a}
   .tag{font-size:11px;padding:2px 8px;border:1px solid #334155;border-radius:999px;color:#cbd5e1}
   .sep{height:1px;background:var(--border);margin:14px 0}
   a{color:var(--accent);text-decoration:none}
+  .story{border-left:4px solid #334155}
+  .story.green{border-left-color:#16a34a}
+  .story.amber{border-left-color:#f59e0b}
+  .story.eval{border-left-color:#60a5fa}
+  .story.label{border-left-color:#818cf8}
+  .story.gold{border-left-color:#d4af37}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="brand">
-      <div class="dot" aria-hidden="true"></div>
-      <div>
-        <h1>Receipts Viewer</h1>
-        <div class="sub">Amber → Eval → Label → <span style="color:var(--gold)">Gold</span></div>
-      </div>
+    <div>
+      <h1>Receipts Viewer</h1>
+      <div class="sub">Amber → Eval → Label → <span style="color:var(--gold)">Gold</span></div>
     </div>
     <div class="sub">Portable proof. No prompts or PII.</div>
   </header>
 
+  <!-- Quick “how to” for humans -->
   <div class="hero">
-    <p><strong>How to read this:</strong> Each card is a tiny, signed record of a step in the learning loop.
-      <span class="muted">AR = Amber (uncertain case), EVR = Eval (variant test), LBR = Label (adjudication), GPR = Gold (promoted for training).</span>
-    </p>
+    <p><b>How this helps:</b> We turn uncertain cases into training data you can trust. Each step emits a tiny signed
+      receipt you can verify offline.</p>
+    <p style="margin-top:8px"><b>3-step demo:</b> 1) Load the latest receipt. 2) Tap <i>Verify signature</i>.
+      3) Read the story box to see what happened and why it matters.</p>
+  </div>
+
+  <!-- Plain-English story -->
+  <div class="card story" id="storyCard" style="margin-bottom:16px">
+    <div class="hd"><div class="pill" id="summaryPill">SUMMARY</div></div>
+    <div class="kv"><div class="k">What happened</div><div class="v" id="summaryWhat">—</div></div>
+    <div class="kv"><div class="k">Why it matters</div><div class="v" id="summaryWhy">—</div></div>
+    <div class="kv" id="summaryNextRow" style="display:none"><div class="k">Next step</div><div class="v" id="summaryNext">—</div></div>
   </div>
 
   <div class="grid">
+    <!-- Receipt detail -->
     <div class="card" id="card">
       <div class="hd">
         <div id="pill" class="pill">Loading…</div>
-        <div class="muted" id="rid">—</div>
+        <div class="sub" id="rid">—</div>
       </div>
       <div class="kv"><div class="k">When</div><div class="v" id="when">—</div></div>
       <div class="kv"><div class="k">Issuer</div><div class="v" id="issuer">—</div></div>
@@ -92,43 +112,58 @@
       <div class="kv"><div class="k">Verify</div>
         <div class="v">
           <div class="btnrow">
-            <button id="verifyBtn" class="primary" aria-label="Verify signature">Verify signature</button>
-            <a id="downloadBtn" class="btn secondary" download aria-label="Download receipt JSON">Download JSON</a>
-            <button id="copyBtn" class="secondary" aria-label="Copy link to this receipt">Copy link</button>
+            <button id="verifyBtn" class="btn primary">Verify signature</button>
+            <a id="downloadBtn" class="btn secondary" download>Download JSON</a>
+            <button id="copyBtn" class="btn secondary">Copy link</button>
           </div>
-          <div id="verifyStatus" class="small" style="margin-top:8px"></div>
+          <div id="verifyStatus" class="small" style="margin-top:10px"></div>
         </div>
       </div>
     </div>
 
+    <!-- Sidebar -->
     <aside class="side">
       <div class="box">
         <strong>Load a receipt</strong>
-        <label for="sourceSel">Source</label>
+        <div class="sep" style="margin:8px 0"></div>
+        <label class="small">Source</label>
         <select id="sourceSel">
           <option value="latest">Latest (receipt.latest.json)</option>
           <option value="pick">Pick from index (if present)</option>
           <option value="custom">Enter path</option>
         </select>
-        <div id="customWrap" style="display:none">
-          <label for="customPath">Path (relative to /docs/)</label>
+
+        <div id="customWrap" style="display:none;margin-top:10px">
+          <label class="small">Path (relative to /docs/)</label>
           <input type="text" id="customPath" placeholder="receipts/amber/ar_2025-...json" />
-          <div class="btnrow" style="margin-top:8px"><button id="loadCustom" class="secondary">Load</button></div>
+          <div class="btnrow" style="margin-top:8px"><button id="loadCustom" class="btn secondary">Load</button></div>
         </div>
-        <div id="indexWrap" style="display:none">
-          <div class="small">If <code>receipts/index.json</code> exists, you’ll see items below.</div>
+
+        <div id="indexWrap" style="display:none;margin-top:10px">
+          <div class="small">If <code>receipts/index.json</code> exists, recent items appear below.</div>
           <div class="list" id="list"></div>
         </div>
+
         <div class="sep"></div>
         <strong>Public key</strong>
-        <div class="small">Verification looks for <code>issuer.pub.json</code> (ed25519 hex). If missing, we’ll show how to add it.</div>
+        <div class="small" id="pkHelp">We look for <code>issuer.pub.json</code> (ed25519 hex). If missing, we’ll show how to add it.</div>
+      </div>
+
+      <div class="box" style="margin-top:12px">
+        <strong>What the badges mean</strong>
+        <div class="small" style="margin-top:6px">
+          <b>Amber</b>: uncertain case captured (no content, just facts).<br/>
+          <b>Eval</b>: a variant test ran on the Amber case.<br/>
+          <b>Label</b>: human/tool adjudication.<br/>
+          <b>Gold</b>: safe to train on (policy checks pass).
+        </div>
       </div>
     </aside>
   </div>
 </div>
 
 <script>
-/* Minimal tweetnacl (ed25519) import */
+/* tweetnacl (ed25519) for signature verify */
 const loadNaCl = () => new Promise((res, rej) => {
   const s=document.createElement('script');
   s.src='https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl-fast.min.js';
@@ -138,20 +173,14 @@ const loadNaCl = () => new Promise((res, rej) => {
 });
 
 const $ = (id)=>document.getElementById(id);
-const state = { receipt:null, pubkeyHex:null, base:'', hasIndex:false, index:null, currentHref:null };
+const state = { receipt:null, pubkeyHex:null, base:'', index:null, currentHref:null };
 
-function setPill(badge, kind){
-  const pill = $('pill');
-  pill.className = 'pill';
-  const map = {
-    green: 'badge-green',
-    amber: 'badge-amber',
-    gold: 'badge-gold',
-    eval: 'badge-eval',
-    label: 'badge-label'
-  };
-  if(map[badge]) pill.classList.add(map[badge]);
-  pill.textContent = (badge||'—').toUpperCase() + (kind?` • ${kind}`:'');
+/* ---------- UI helpers ---------- */
+function setBadgePill(el, badge, kind){
+  el.className = 'pill';
+  const map = {green:'badge-green', amber:'badge-amber', gold:'badge-gold', eval:'badge-eval', label:'badge-label'};
+  if(map[badge]) el.classList.add(map[badge]);
+  el.textContent = (badge||'—').toUpperCase() + (kind?` • ${kind}`:'');
 }
 
 function fmtWhen(s){
@@ -160,34 +189,90 @@ function fmtWhen(s){
   return d.toLocaleString();
 }
 
+function fillStory(rec){
+  const badge = rec?.what?.badge || '—';
+  const kind  = rec?.what?.kind  || '';
+  const storyCard = $('storyCard');
+  storyCard.className = 'card story ' + (badge || '');
+  setBadgePill($('summaryPill'), badge, kind);
+
+  let what='—', why='—', next=null;
+
+  if (badge==='amber'){
+    const whyFlags = (rec.flags||[]).join(', ') || 'uncertain';
+    what = `We captured an uncertain case (${whyFlags}). No prompts or content saved—just tiny facts.`;
+    why  = `Amber routes tricky cases to experiments so we learn without training on junk.`;
+    next = `Run one or two variants (Eval), then add a Label. If settled, promote to Gold.`;
+  } else if (badge==='eval'){
+    const model = rec.variant?.model || 'a variant';
+    const passed = (rec.tests||[]).filter(t=>t.pass).map(t=>t.name).join(', ') || 'no tests passed';
+    what = `We tested ${model} on the Amber case.`;
+    why  = `Shows which variant behaves better on this case (passed: ${passed}).`;
+    next = `If consistent and safe, request a Label → then promote to Gold.`;
+  } else if (badge==='label'){
+    const verdict = rec.label?.verdict || 'reviewed';
+    what = `A reviewer adjudicated this case: ${verdict}.`;
+    why  = `Labels let us train on resolved truths, not guesses.`;
+    next = `If policy checks pass, promote to Gold (training).`;
+  } else if (badge==='gold'){
+    const labelRef = rec.basis?.label_ref ? `label ${rec.basis.label_ref}` : 'policy checks';
+    const checks = rec.policy_checks ? Object.entries(rec.policy_checks).map(([k,v])=>`${k}:${v}`).join(', ') : '—';
+    what = `This case graduated to Gold (training). Basis: ${labelRef}.`;
+    why  = `Gold = safe to train on. Provenance is portable. Checks → ${checks}.`;
+    next = null;
+  } else {
+    what = `Receipt loaded.`;
+    why  = `Use the buttons to verify the signature locally.`;
+  }
+
+  $('summaryWhat').textContent = what;
+  $('summaryWhy').textContent  = why;
+  if(next){ $('summaryNextRow').style.display='grid'; $('summaryNext').textContent=next; }
+  else { $('summaryNextRow').style.display='none'; }
+}
+
 function render(rec){
   state.receipt = rec;
   $('rid').textContent = rec.rid || '—';
-  setPill(rec.what?.badge, rec.what?.kind);
-  $('when').textContent = fmtWhen(rec.when);
+  setBadgePill($('pill'), rec.what?.badge, rec.what?.kind);
+  $('when').textContent   = fmtWhen(rec.when);
   $('issuer').textContent = rec.issuer || '—';
-  $('kind').textContent = rec.what?.kind || '—';
-  $('flags').textContent = (rec.flags && rec.flags.length)? rec.flags.join(', ') : '—';
-  $('sigcode').textContent = (rec.sig||'').slice(0,20)+'…';
-  if(rec.metrics){ $('metricsRow').style.display='grid'; $('metrics').textContent = Object.entries(rec.metrics).map(([k,v])=>`${k}=${v}`).join(' · ');}
-  else { $('metricsRow').style.display='none'; }
+  $('kind').textContent   = rec.what?.kind || '—';
+  $('flags').textContent  = (rec.flags && rec.flags.length)? rec.flags.join(', ') : '—';
+  $('sigcode').textContent = (rec.sig||'').slice(0,24)+'…';
+
+  // Optional sections
+  if(rec.metrics){
+    $('metricsRow').style.display='grid';
+    $('metrics').textContent = Object.entries(rec.metrics).map(([k,v])=>`${k}=${v}`).join(' · ');
+  } else $('metricsRow').style.display='none';
+
   if(rec.basis || rec.policy_checks){
     $('basisRow').style.display='grid';
     const b1 = rec.basis? Object.entries(rec.basis).map(([k,v])=>`${k}=${Array.isArray(v)?v.join('|'):v}`).join(' · ') : '';
     const b2 = rec.policy_checks? ' | checks: ' + Object.entries(rec.policy_checks).map(([k,v])=>`${k}:${v}`).join(', ') : '';
-    $('basis').textContent = (b1+b2).trim() || '—';
-  } else { $('basisRow').style.display='none'; }
+    $('basis').textContent = (b1+b2).replace(/^ \| /,'') || '—';
+  } else $('basisRow').style.display='none';
+
+  // Buttons
   $('verifyStatus').textContent='';
   const dl = $('downloadBtn'); dl.href = state.currentHref || (state.base + 'receipt.latest.json');
-  const cp = $('copyBtn'); cp.onclick = ()=>{ navigator.clipboard.writeText(dl.href).then(()=>{ $('verifyStatus').textContent='Link copied.'}) };
+  $('copyBtn').onclick = () => {
+    navigator.clipboard.writeText(dl.href).then(()=>{
+      $('verifyStatus').textContent='Link copied.';
+    });
+  };
+
+  // Story box
+  fillStory(rec);
 }
 
+/* ---------- Data loading ---------- */
 async function fetchJSON(path){
   const r = await fetch(path, {cache:'no-store'});
   if(!r.ok) throw new Error('Failed to load '+path);
   return await r.json();
 }
-
 async function loadLatest(){
   const href = state.base + 'receipt.latest.json';
   state.currentHref = href;
@@ -200,19 +285,18 @@ async function loadCustomPath(p){
   const rec = await fetchJSON(href);
   render(rec);
 }
-
 async function tryLoadIndex(){
   try{
     const idx = await fetchJSON(state.base + 'receipts/index.json');
-    state.hasIndex = true; state.index = idx;
+    state.index = idx;
     const list = $('list'); list.innerHTML='';
     ['amber','eval','label','promote'].forEach(group=>{
       if(idx[group]?.length){
         const h = document.createElement('div'); h.className='small'; h.style.margin='6px 0 4px'; h.textContent = group.toUpperCase();
         list.appendChild(h);
-        idx[group].slice(0,8).forEach(item=>{
+        idx[group].slice(0,10).forEach(item=>{
           const row = document.createElement('div'); row.className='item';
-          const left = document.createElement('div'); left.textContent = item.rid;
+          const left = document.createElement('div'); left.textContent = item.rid || item.path;
           const right = document.createElement('div'); right.className='tag'; right.textContent = item.when || '';
           row.appendChild(left); row.appendChild(right);
           row.onclick = ()=> loadCustomPath(item.path);
@@ -220,40 +304,22 @@ async function tryLoadIndex(){
         });
       }
     });
-  }catch(_){ state.hasIndex=false; }
+  }catch(_){ /* no index */ }
 }
-
 async function tryLoadPub(){
   try{
     const pub = await fetchJSON(state.base + 'issuer.pub.json');
     if(!pub.ed25519_public_key_hex) throw 0;
     state.pubkeyHex = pub.ed25519_public_key_hex.replace(/^0x/,'');
-  }catch(_){ state.pubkeyHex=null; }
-}
-
-async function verify(){
-  const el = $('verifyStatus');
-  el.textContent = 'Verifying…';
-  if(!state.pubkeyHex){
-    el.innerHTML = 'Missing public key. Add <code>docs/issuer.pub.json</code> like:<br><code>{ "issuer": "did:web:openline.local", "ed25519_public_key_hex": "ABCDEF..." }</code>';
-    return;
-  }
-  const rec = {...state.receipt}; if(!rec || !rec.sig){ el.textContent='No signature found.'; return; }
-  const sigHex = String(rec.sig).replace(/^ed25519:/,''); delete rec.sig;
-  const canonical = JSON.stringify(sortKeysDeep(rec));
-  try{
-    await loadNaCl();
-    const nacl = window.nacl;
-    const msg = new TextEncoder().encode(canonical);
-    const sig = hexToBytes(sigHex);
-    const pk = hexToBytes(state.pubkeyHex);
-    const ok = nacl.sign.detached.verify(msg, sig, pk);
-    el.innerHTML = ok ? '<span class="good">Signature valid ✔</span>' : '<span class="err">Signature failed ✖</span>';
-  }catch(e){
-    el.innerHTML = '<span class="err">Verify error: '+(e.message||e)+'</span>';
+    $('pkHelp').innerHTML = `Public key loaded ✅ <code>${pub.ed25519_public_key_hex.slice(0,12)}…</code>`;
+  }catch(_){
+    state.pubkeyHex=null;
+    $('pkHelp').innerHTML = `Missing public key. Add <code>docs/issuer.pub.json</code> like:<br>
+<code>{ "issuer": "did:web:openline.local", "ed25519_public_key_hex": "ABCDEF..." }</code>`;
   }
 }
 
+/* ---------- Verify ---------- */
 function sortKeysDeep(obj){
   if(Array.isArray(obj)) return obj.map(sortKeysDeep);
   if(obj && typeof obj==='object'){
@@ -264,33 +330,52 @@ function sortKeysDeep(obj){
   return obj;
 }
 function hexToBytes(h){
-  const s = h.length%2? '0'+h:h;
-  const arr=new Uint8Array(s.length/2);
-  for(let i=0;i<s.length;i+=2) arr[i/2]=parseInt(s.substr(i,2),16);
+  const s = (h||'').replace(/^0x/,'');
+  const arr=new Uint8Array(Math.floor(s.length/2));
+  for(let i=0;i<arr.length;i++) arr[i]=parseInt(s.substr(i*2,2),16)||0;
   return arr;
 }
+async function verify(){
+  const el = $('verifyStatus');
+  el.textContent = 'Verifying…';
+  if(!state.pubkeyHex){ el.innerHTML = '<span class="err">No public key loaded.</span>'; return; }
+  const rec = {...state.receipt}; if(!rec || !rec.sig){ el.innerHTML = '<span class="err">No signature found.</span>'; return; }
+  const sigHex = rec.sig; delete rec.sig;
+  const canonical = JSON.stringify(sortKeysDeep(rec)); // JCS-ish
+  try{
+    await loadNaCl();
+    const msg = new TextEncoder().encode(canonical);
+    const sig = hexToBytes(sigHex);
+    const pk  = hexToBytes(state.pubkeyHex);
+    const ok  = window.nacl.sign.detached.verify(msg, sig, pk);
+    el.innerHTML = ok ? '<span class="good">Signature valid ✔</span>' : '<span class="err">Signature failed ✖</span>';
+  }catch(e){
+    el.innerHTML = '<span class="err">Verify error: '+(e.message||e)+'</span>';
+  }
+}
 
-// UI hookups
+/* ---------- UI events ---------- */
 $('verifyBtn').onclick = verify;
 $('sourceSel').onchange = (e)=>{
-  const v = e.target.value;
+  const v=e.target.value;
   $('customWrap').style.display = v==='custom'?'block':'none';
-  $('indexWrap').style.display = v==='pick'?'block':'none';
-  if(v==='latest') loadLatest();
+  $('indexWrap').style.display  = v==='pick'  ?'block':'none';
+  if(v==='latest') loadLatest().catch(()=>{});
 };
 $('loadCustom').onclick = ()=>{
   const p = $('customPath').value.trim();
   if(p) loadCustomPath(p);
 };
 
-// boot
+/* ---------- boot ---------- */
 (async function init(){
-  state.base = ''; // same folder as index.html
-  await Promise.all([tryLoadIndex(), tryLoadPub()]);
+  state.base = ''; // files live alongside this page (GitHub Pages /docs)
+  await tryLoadPub();
+  await tryLoadIndex();
   await loadLatest().catch(err=>{
     render({rid:'—',when:null,issuer:'—',what:{badge:'amber',kind:'case'},flags:['—'],sig:''});
     $('verifyStatus').innerHTML = '<span class="err">Could not load receipt.latest.json</span>';
-    console.error(err);
+    console.warn(err);
   });
 })();
 </script>
