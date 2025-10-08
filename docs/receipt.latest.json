@@ -1,0 +1,23 @@
+{
+  "basis": {
+    "eval_refs": [
+      "evr_2025-10-08T20-50-49Z_6649"
+    ],
+    "label_ref": "lbr_2025-10-08T20-50-49Z_6649"
+  },
+  "issuer": "did:web:openline.local",
+  "kid": "dev-1",
+  "parent": "ar_2025-10-08T20-50-49Z_6649",
+  "policy_checks": {
+    "consent": "pass",
+    "pii": "pass"
+  },
+  "rid": "gpr_2025-10-08T20-50-49Z_6649",
+  "schema": "olr/gpr.v0.1",
+  "sig": "b411730e1b407575064105e22ca61dd54d8ee2e700ea309cec1d70cbdae5e84b84ce1fd6c451969f6a1964ecea276f85691d5dc49268199d60dc9f3ef76a8f04",
+  "what": {
+    "badge": "gold",
+    "kind": "promotion"
+  },
+  "when": "2025-10-08T20:50:49Z"
+}

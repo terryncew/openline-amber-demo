@@ -1,0 +1,21 @@
+{
+  "issuer": "did:web:openline.local",
+  "kid": "dev-1",
+  "metrics": {},
+  "parent": "ar_2025-10-08T20-50-49Z_6649",
+  "rid": "evr_2025-10-08T20-50-49Z_6649",
+  "schema": "olr/evr.v0.1",
+  "sig": "758455a2f680fe49c171e161134ebe2389dc5620abf0632f5b6a8c451d90ba3033e894da4a6cb5469c5a04cb22e6610b9cc82445550e7c317269f5c8e7c34a09",
+  "tests": [
+    {
+      "name": "consistency",
+      "pass": true
+    }
+  ],
+  "variant": {},
+  "what": {
+    "badge": "eval",
+    "kind": "variant"
+  },
+  "when": "2025-10-08T20:50:49Z"
+}

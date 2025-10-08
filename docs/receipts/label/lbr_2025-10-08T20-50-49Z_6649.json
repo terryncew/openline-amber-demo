@@ -1,0 +1,19 @@
+{
+  "issuer": "did:web:openline.local",
+  "kid": "dev-1",
+  "label": {
+    "reason_codes": [
+      "retrieval-agreement\u2191"
+    ],
+    "verdict": "correct"
+  },
+  "parent": "ar_2025-10-08T20-50-49Z_6649",
+  "rid": "lbr_2025-10-08T20-50-49Z_6649",
+  "schema": "olr/lbr.v0.1",
+  "sig": "3b649a77f4e0b67a422b87712f06ad18e3dd874e1278b3b3b140ac6b76ab8fea788451f9e22a05ab76d83b1b6f10513becc59e20c87325038cfe5bbcd30cf208",
+  "what": {
+    "badge": "label",
+    "kind": "adjudication"
+  },
+  "when": "2025-10-08T20:50:49Z"
+}
