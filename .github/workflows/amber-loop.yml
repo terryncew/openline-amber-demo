@@ -1,48 +1,97 @@
 name: Amber Loop
 on:
-  workflow_dispatch:
   push:
     paths:
       - "server.py"
       - "amber_api.py"
-      - "receipts_signing.py"
-      - "requirements.txt"
       - ".github/workflows/amber-loop.yml"
+      - "requirements.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
 jobs:
   loop:
     runs-on: ubuntu-latest
-    permissions: { contents: write }
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
-        with: { python-version: "3.11" }
-      - run: pip install -r requirements.txt
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          sudo apt-get update
+          sudo apt-get install -y jq
+
       - name: Launch API
         env:
+          DEV_SEED: dev-seed-change-me-32bytes________
           ISSUER_DID: did:web:openline.local
         run: |
           nohup uvicorn server:app --host 127.0.0.1 --port 8787 >/tmp/app.log 2>&1 &
-          for i in {1..30}; do sleep 0.5; curl -sf 127.0.0.1:8787/health && break || true; done
+          # Wait until health returns 200
+          for i in {1..40}; do
+            if curl -sf http://127.0.0.1:8787/health >/dev/null; then
+              echo "API is up"; break
+            fi
+            sleep 0.5
+          done
+          curl -s http://127.0.0.1:8787/health; echo
+
       - name: Amber → Eval → Label → Promote
+        env:
+          BASE: http://127.0.0.1:8787
         run: |
-          AR=$(curl -sX POST 127.0.0.1:8787/api/amber/capture -H 'content-type: application/json' -d '{"flags":["amber:novel","route:experiment"],"metrics":{"unconfirmed_ratio":0.41,"motif_distance":0.62},"digests":{"claim_graph_hash":"sha256:abc"},"triggers":["unconfirmed_ratio","motif_distance"]}' | python -c "import sys,json;print(json.load(sys.stdin)['receipt']['rid'])")
-          EVR=$(curl -sX POST 127.0.0.1:8787/api/amber/eval -H 'content-type: application/json' -d "{\"parent\":\"$AR\",\"variant\":{\"model\":\"gpt-xyz\",\"tooling\":[\"retriever:v2\"]},\"tests\":[{\"name\":\"consistency\",\"pass\":true,\"score\":0.89}],\"metrics\":{\"latency_ms\":720}}" | python -c "import sys,json;print(json.load(sys.stdin)['receipt']['rid'])")
-          LBR=$(curl -sX POST 127.0.0.1:8787/api/amber/label -H 'content-type: application/json' -d "{\"parent\":\"$AR\",\"label\":{\"verdict\":\"correct\",\"reason_codes\":[\"retrieval-agreement↑\"],\"rater\":{\"role\":\"domain-reviewer\",\"rep\":0.72}}}" | python -c "import sys,json;print(json.load(sys.stdin)['receipt']['rid'])")
-          GPR=$(curl -sX POST 127.0.0.1:8787/api/amber/promote -H 'content-type: application/json' -d "{\"parent\":\"$AR\",\"basis\":{\"label_ref\":\"$LBR\",\"eval_refs\":[\"$EVR\"],\"policy\":\"superego.v0.3\"},\"policy_checks\":{\"pii\":\"pass\",\"consent\":\"pass\"}}" | python -c "import sys,json;print(json.load(sys.stdin)['receipt']['rid'])")
-          echo "AR=$AR EVR=$EVR LBR=$LBR GPR=$GPR"
+          set -Eeuo pipefail
+
+          echo "Capture Amber"
+          AR_JSON=$(curl -sS -f "$BASE/api/amber/capture" \
+            -H 'content-type: application/json' \
+            --data '{"flags":["amber:unconfirmed"],"metrics":{"unconfirmed_ratio":0.42},"digests":{"claim_graph_hash":"x"}}' | tee /tmp/ar.json)
+          AR=$(jq -er '.receipt.rid' /tmp/ar.json)
+          echo "AR=$AR"
+
+          echo "Eval"
+          EVR_JSON=$(curl -sS -f "$BASE/api/amber/eval" \
+            -H 'content-type: application/json' \
+            --data "{\"parent\":\"$AR\",\"tests\":[{\"name\":\"consistency\",\"pass\":true}]}" | tee /tmp/evr.json)
+          EVR=$(jq -er '.receipt.rid' /tmp/evr.json)
+          echo "EVR=$EVR"
+
+          echo "Label"
+          LBR_JSON=$(curl -sS -f "$BASE/api/amber/label" \
+            -H 'content-type: application/json' \
+            --data "{\"parent\":\"$AR\",\"label\":{\"verdict\":\"correct\",\"reason_codes\":[\"retrieval-agreement↑\"]}}" | tee /tmp/lbr.json)
+          LBR=$(jq -er '.receipt.rid' /tmp/lbr.json)
+          echo "LBR=$LBR"
+
+          echo "Promote"
+          GPR_JSON=$(curl -sS -f "$BASE/api/amber/promote" \
+            -H 'content-type: application/json' \
+            --data "{\"parent\":\"$AR\",\"basis\":{\"label_ref\":\"$LBR\",\"eval_refs\":[\"$EVR\"]},\"policy_checks\":{\"pii\":\"pass\",\"consent\":\"pass\"}}" | tee /tmp/gpr.json)
+          GPR=$(jq -er '.receipt.rid' /tmp/gpr.json)
+          echo "GPR=$GPR"
+
       - name: Commit receipts to docs/
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           mkdir -p docs/receipts/amber docs/receipts/eval docs/receipts/label docs/receipts/promote
-          git add docs/receipt.latest.json docs/receipts/** || true
-          git commit -m "publish receipts (AR→EVR→LBR→GPR)" || echo "nothing to commit"
-          git push || true
+          git add docs/receipts docs/receipt.latest.json || true
+          git commit -m "chore(ci): publish latest receipt chain" || echo "nothing to commit"
+          git push || echo "no push"
+
       - name: Warn if Amber without Gold
         run: |
           AMBER=$(ls docs/receipts/amber/*.json 2>/dev/null | wc -l || true)
           GOLD=$(ls docs/receipts/promote/*.json 2>/dev/null | wc -l || true)
           echo "Amber:$AMBER Gold:$GOLD"
           if [ "$AMBER" -gt 0 ] && [ "$GOLD" -eq 0 ]; then
-            echo "::warning::Amber exists; do not train on unlabeled cases."
+            echo "::warning::Amber exists; training jobs must require Gold receipts"
           fi
