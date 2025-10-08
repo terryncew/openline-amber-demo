@@ -1,0 +1,48 @@
+name: Amber Loop
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "server.py"
+      - "amber_api.py"
+      - "receipts_signing.py"
+      - "requirements.txt"
+      - ".github/workflows/amber-loop.yml"
+jobs:
+  loop:
+    runs-on: ubuntu-latest
+    permissions: { contents: write }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -r requirements.txt
+      - name: Launch API
+        env:
+          ISSUER_DID: did:web:openline.local
+        run: |
+          nohup uvicorn server:app --host 127.0.0.1 --port 8787 >/tmp/app.log 2>&1 &
+          for i in {1..30}; do sleep 0.5; curl -sf 127.0.0.1:8787/health && break || true; done
+      - name: Amber → Eval → Label → Promote
+        run: |
+          AR=$(curl -sX POST 127.0.0.1:8787/api/amber/capture -H 'content-type: application/json' -d '{"flags":["amber:novel","route:experiment"],"metrics":{"unconfirmed_ratio":0.41,"motif_distance":0.62},"digests":{"claim_graph_hash":"sha256:abc"},"triggers":["unconfirmed_ratio","motif_distance"]}' | python -c "import sys,json;print(json.load(sys.stdin)['receipt']['rid'])")
+          EVR=$(curl -sX POST 127.0.0.1:8787/api/amber/eval -H 'content-type: application/json' -d "{\"parent\":\"$AR\",\"variant\":{\"model\":\"gpt-xyz\",\"tooling\":[\"retriever:v2\"]},\"tests\":[{\"name\":\"consistency\",\"pass\":true,\"score\":0.89}],\"metrics\":{\"latency_ms\":720}}" | python -c "import sys,json;print(json.load(sys.stdin)['receipt']['rid'])")
+          LBR=$(curl -sX POST 127.0.0.1:8787/api/amber/label -H 'content-type: application/json' -d "{\"parent\":\"$AR\",\"label\":{\"verdict\":\"correct\",\"reason_codes\":[\"retrieval-agreement↑\"],\"rater\":{\"role\":\"domain-reviewer\",\"rep\":0.72}}}" | python -c "import sys,json;print(json.load(sys.stdin)['receipt']['rid'])")
+          GPR=$(curl -sX POST 127.0.0.1:8787/api/amber/promote -H 'content-type: application/json' -d "{\"parent\":\"$AR\",\"basis\":{\"label_ref\":\"$LBR\",\"eval_refs\":[\"$EVR\"],\"policy\":\"superego.v0.3\"},\"policy_checks\":{\"pii\":\"pass\",\"consent\":\"pass\"}}" | python -c "import sys,json;print(json.load(sys.stdin)['receipt']['rid'])")
+          echo "AR=$AR EVR=$EVR LBR=$LBR GPR=$GPR"
+      - name: Commit receipts to docs/
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          mkdir -p docs/receipts/amber docs/receipts/eval docs/receipts/label docs/receipts/promote
+          git add docs/receipt.latest.json docs/receipts/** || true
+          git commit -m "publish receipts (AR→EVR→LBR→GPR)" || echo "nothing to commit"
+          git push || true
+      - name: Warn if Amber without Gold
+        run: |
+          AMBER=$(ls docs/receipts/amber/*.json 2>/dev/null | wc -l || true)
+          GOLD=$(ls docs/receipts/promote/*.json 2>/dev/null | wc -l || true)
+          echo "Amber:$AMBER Gold:$GOLD"
+          if [ "$AMBER" -gt 0 ] && [ "$GOLD" -eq 0 ]; then
+            echo "::warning::Amber exists; do not train on unlabeled cases."
+          fi
