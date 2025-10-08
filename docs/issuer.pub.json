@@ -1,0 +1,4 @@
+{
+  "issuer": "did:web:openline.local",
+  "ed25519_public_key_hex": "PUT_YOUR_PUBLIC_KEY_HEX_HERE"
+}
