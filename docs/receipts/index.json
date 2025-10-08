@@ -1,8 +1,50 @@
 {
   "amber": [
-    {"rid":"ar_2025-01-14T18-25-33Z_8f2c","path":"receipts/amber/ar_2025-01-14T18-25-33Z_8f2c.json","when":"2025-01-14T18:25:33Z"}
+    {
+      "path": "receipts/amber/ar_2025-10-08T20-50-49Z_6649.json",
+      "rid": "ar_2025-10-08T20-50-49Z_6649",
+      "when": "2025-10-08T20:50:49Z"
+    },
+    {
+      "path": "receipts/amber/ar_2025-10-08T20-56-12Z_6972.json",
+      "rid": "ar_2025-10-08T20-56-12Z_6972",
+      "when": "2025-10-08T20:56:12Z"
+    }
   ],
-  "eval":   [],
-  "label":  [],
-  "promote":[]
+  "eval": [
+    {
+      "path": "receipts/eval/evr_2025-10-08T20-50-49Z_6649.json",
+      "rid": "evr_2025-10-08T20-50-49Z_6649",
+      "when": "2025-10-08T20:50:49Z"
+    },
+    {
+      "path": "receipts/eval/evr_2025-10-08T20-56-12Z_6972.json",
+      "rid": "evr_2025-10-08T20-56-12Z_6972",
+      "when": "2025-10-08T20:56:12Z"
+    }
+  ],
+  "label": [
+    {
+      "path": "receipts/label/lbr_2025-10-08T20-50-49Z_6649.json",
+      "rid": "lbr_2025-10-08T20-50-49Z_6649",
+      "when": "2025-10-08T20:50:49Z"
+    },
+    {
+      "path": "receipts/label/lbr_2025-10-08T20-56-12Z_6972.json",
+      "rid": "lbr_2025-10-08T20-56-12Z_6972",
+      "when": "2025-10-08T20:56:12Z"
+    }
+  ],
+  "promote": [
+    {
+      "path": "receipts/promote/gpr_2025-10-08T20-50-49Z_6649.json",
+      "rid": "gpr_2025-10-08T20-50-49Z_6649",
+      "when": "2025-10-08T20:50:49Z"
+    },
+    {
+      "path": "receipts/promote/gpr_2025-10-08T20-56-12Z_6972.json",
+      "rid": "gpr_2025-10-08T20-56-12Z_6972",
+      "when": "2025-10-08T20:56:12Z"
+    }
+  ]
 }

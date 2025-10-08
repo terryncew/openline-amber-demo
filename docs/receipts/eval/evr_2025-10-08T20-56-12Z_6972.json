@@ -1,0 +1,26 @@
+{
+  "issuer": "did:web:openline.local",
+  "kid": "dev-1",
+  "metrics": {
+    "latency_ms": 700
+  },
+  "parent": "ar_2025-10-08T20-56-12Z_6972",
+  "rid": "evr_2025-10-08T20-56-12Z_6972",
+  "schema": "olr/evr.v0.1",
+  "sig": "b8af6ebd7af902f90a8a087673c082add3d50f3f0632aa92a1c660fe430eed273ac6599fa087cc16ac887bdc86baaa560af303a1296ce7c4aad6114c5755e204",
+  "tests": [
+    {
+      "name": "consistency",
+      "pass": true,
+      "score": 0.91
+    }
+  ],
+  "variant": {
+    "model": "demo-1"
+  },
+  "what": {
+    "badge": "eval",
+    "kind": "variant"
+  },
+  "when": "2025-10-08T20:56:12Z"
+}
