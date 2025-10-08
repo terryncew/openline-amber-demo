@@ -4,8 +4,9 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'server.py'
       - '.github/workflows/amber-loop.yml'
+      - 'server.py'
+      - 'amber_api.py'
       - 'requirements.txt'
       - 'docs/**'
 
@@ -13,13 +14,14 @@ jobs:
   loop:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # allow committing docs/
+      contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Python
-      - uses: actions/setup-python@v5
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -40,7 +42,7 @@ jobs:
       - name: Import smoke test (server:app)
         run: |
           python - <<'PY'
-          import importlib, sys
+          import importlib
           m = importlib.import_module("server")
           assert hasattr(m, "app"), "server:app not found"
           print("Import OK:", getattr(m.app, "title", "server"))
@@ -59,60 +61,57 @@ jobs:
               echo "API is up"; break
             fi
           done
-          curl -s 127.0.0.1:8787/health | jq .
+          curl -s 127.0.0.1:8787/health || true
 
       - name: Amber → Eval → Label → Promote
         run: |
           set -euo pipefail
           AR=$(curl -sX POST 127.0.0.1:8787/api/amber/capture \
-              -H 'content-type: application/json' \
-              -d '{"flags":["amber:unconfirmed","route:experiment"],"metrics":{"unconfirmed_ratio":0.42,"motif_distance":0.61},"digests":{"claim_graph_hash":"sha256:abc"}}' \
-              | jq -r .receipt.rid)
+            -H 'content-type: application/json' \
+            -d '{"flags":["amber:unconfirmed","route:experiment"],"metrics":{"unconfirmed_ratio":0.42,"motif_distance":0.61},"digests":{"claim_graph_hash":"sha256:abc"}}' \
+            | jq -r .receipt.rid)
           echo "AR=$AR"
 
           EVR=$(curl -sX POST 127.0.0.1:8787/api/amber/eval \
-              -H 'content-type: application/json' \
-              -d "{\"parent\":\"$AR\",\"variant\":{\"model\":\"demo-1\"},\"tests\":[{\"name\":\"consistency\",\"pass\":true,\"score\":0.91}],\"metrics\":{\"latency_ms\":700}}" \
-              | jq -r .receipt.rid)
+            -H 'content-type: application/json' \
+            -d "{\"parent\":\"$AR\",\"variant\":{\"model\":\"demo-1\"},\"tests\":[{\"name\":\"consistency\",\"pass\":true,\"score\":0.91}],\"metrics\":{\"latency_ms\":700}}" \
+            | jq -r .receipt.rid)
           echo "EVR=$EVR"
 
           LBR=$(curl -sX POST 127.0.0.1:8787/api/amber/label \
-              -H 'content-type: application/json' \
-              -d "{\"parent\":\"$AR\",\"label\":{\"verdict\":\"correct\",\"reason_codes\":[\"retrieval-agreement\"],\"rater\":{\"role\":\"reviewer\",\"rep\":0.7}}}" \
-              | jq -r .receipt.rid)
+            -H 'content-type: application/json' \
+            -d "{\"parent\":\"$AR\",\"label\":{\"verdict\":\"correct\",\"reason_codes\":[\"retrieval-agreement\"],\"rater\":{\"role\":\"reviewer\",\"rep\":0.7}}}" \
+            | jq -r .receipt.rid)
           echo "LBR=$LBR"
 
           GPR=$(curl -sX POST 127.0.0.1:8787/api/amber/promote \
-              -H 'content-type: application/json' \
-              -d "{\"parent\":\"$AR\",\"basis\":{\"label_ref\":\"$LBR\",\"eval_refs\":[\"$EVR\"],\"policy\":\"superego.v0.3\"},\"policy_checks\":{\"pii\":\"pass\",\"consent\":\"pass\"}}" \
-              | jq -r .receipt.rid)
+            -H 'content-type: application/json' \
+            -d "{\"parent\":\"$AR\",\"basis\":{\"label_ref\":\"$LBR\",\"eval_refs\":[\"$EVR\"],\"policy\":\"superego.v0.3\"},\"policy_checks\":{\"pii\":\"pass\",\"consent\":\"pass\"}}" \
+            | jq -r .receipt.rid)
           echo "GPR=$GPR"
 
           test -n "$AR" -a -n "$EVR" -a -n "$LBR" -a -n "$GPR"
-          ls -R docs || true
 
-      - name: Build receipts index (optional)
+      - name: Build receipts index
         run: |
           python - <<'PY'
           import os, json
-          base = "docs/receipts"
-          out = {"amber":[], "eval":[], "label":[], "promote":[]}
-          for k in out.keys():
-              d = os.path.join(base, k if k!="promote" else "promote")
+          base="docs/receipts"
+          out={"amber":[],"eval":[],"label":[],"promote":[]}
+          for k in list(out.keys()):
+              d=os.path.join(base, k)
               if not os.path.isdir(d): continue
               for fn in sorted(os.listdir(d))[-20:]:
                   if fn.endswith(".json"):
-                      p = os.path.join(d, fn)
+                      p=os.path.join(d,fn)
                       try:
-                          with open(p) as f: rec = json.load(f)
-                          out[k].append({"rid": rec.get("rid", fn),
-                                         "when": rec.get("when",""),
-                                         "path": p.replace("docs/","")})
-                      except Exception:
-                          pass
-          os.makedirs("docs/receipts", exist_ok=True)
-          with open("docs/receipts/index.json","w") as f: json.dump(out, f, indent=2, sort_keys=True)
-          print("Wrote docs/receipts/index.json")
+                          with open(p) as f: rec=json.load(f)
+                      except Exception: continue
+                      out[k].append({"rid":rec.get("rid",fn),"when":rec.get("when",""),"path":p.replace("docs/","")})
+          os.makedirs(base, exist_ok=True)
+          with open("docs/receipts/index.json","w") as f:
+              json.dump(out, f, indent=2, sort_keys=True)
+          print("wrote docs/receipts/index.json")
           PY
 
       - name: Commit receipts to docs/
@@ -127,7 +126,7 @@ jobs:
             echo "No docs changes."
           fi
 
-      - name: Print server log on failure
+      - name: Dump server log on failure
         if: failure()
         run: |
           echo "---- /tmp/app.log ----"
