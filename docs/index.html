@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Receipts Viewer — Amber → Gold</title>
+<title>Receipts Viewer — OLR/1.5</title>
 <meta name="color-scheme" content="dark">
 <style>
   :root{
@@ -32,9 +32,7 @@
     font-weight:700;font-size:12px;letter-spacing:.2px}
   .badge-green{color:#86efac;border-color:#14532d;background:rgba(22,163,74,.09)}
   .badge-amber{color:#fde68a;border-color:#7c580b;background:rgba(245,158,11,.10)}
-  .badge-gold{color:#f9e8b2;border-color:#7a5f18;background:rgba(212,175,55,.10)}
-  .badge-eval{color:#93c5fd;border-color:#1e3a8a;background:rgba(59,130,246,.10)}
-  .badge-label{color:#c7d2fe;border-color:#312e81;background:rgba(99,102,241,.10)}
+  .badge-red{color:#fecaca;border-color:#7f1d1d;background:rgba(239,68,68,.10)}
   .kv{display:grid;grid-template-columns:150px 1fr;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)}
   .kv:last-child{border-bottom:none}
   .k{color:var(--muted)}
@@ -47,7 +45,7 @@
   }
   .btn.primary{background:#1e40af;border-color:#1e3a8a}
   .btn.secondary{background:#0f172a;border-color:#233044}
-  .btn:active{transform:translateY(1px)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
   .good{color:#86efac}.warnc{color:#fde68a}.err{color:#fb7185}
   .side{position:sticky;top:18px}
   .box{background:var(--card);border:1px solid var(--border);
@@ -64,9 +62,9 @@
   .story{border-left:4px solid #334155}
   .story.green{border-left-color:#16a34a}
   .story.amber{border-left-color:#f59e0b}
-  .story.eval{border-left-color:#60a5fa}
-  .story.label{border-left-color:#818cf8}
-  .story.gold{border-left-color:#d4af37}
+  .story.red{border-left-color:#ef4444}
+  .dialrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .chip{font-size:12px;border:1px solid #334155;border-radius:10px;padding:6px 8px;background:#0c121a}
 </style>
 </head>
 <body>
@@ -74,20 +72,17 @@
   <header>
     <div>
       <h1>Receipts Viewer</h1>
-      <div class="sub">Amber → Eval → Label → <span style="color:var(--gold)">Gold</span></div>
+      <div class="sub">OLR/1.5 · Amber → (optional) Eval/Label → Gold</div>
     </div>
     <div class="sub">Portable proof. No prompts or PII.</div>
   </header>
 
-  <!-- Quick “how to” for humans -->
   <div class="hero">
-    <p><b>How this helps:</b> We turn uncertain cases into training data you can trust. Each step emits a tiny signed
-      receipt you can verify offline.</p>
-    <p style="margin-top:8px"><b>3-step demo:</b> 1) Load the latest receipt. 2) Tap <i>Verify signature</i>.
-      3) Read the story box to see what happened and why it matters.</p>
+    <p><b>How this helps:</b> We turn uncertain cases into training data you can trust. Each step emits a tiny signed receipt you can verify offline.</p>
+    <p style="margin-top:8px"><b>3-step demo:</b> 1) Load the latest receipt. 2) (Optional) Verify sig if present. 3) Read the story box.</p>
   </div>
 
-  <!-- Plain-English story -->
+  <!-- Story -->
   <div class="card story" id="storyCard" style="margin-bottom:16px">
     <div class="hd"><div class="pill" id="summaryPill">SUMMARY</div></div>
     <div class="kv"><div class="k">What happened</div><div class="v" id="summaryWhat">—</div></div>
@@ -104,15 +99,25 @@
       </div>
       <div class="kv"><div class="k">When</div><div class="v" id="when">—</div></div>
       <div class="kv"><div class="k">Issuer</div><div class="v" id="issuer">—</div></div>
-      <div class="kv"><div class="k">Kind</div><div class="v" id="kind">—</div></div>
-      <div class="kv"><div class="k">Flags</div><div class="v" id="flags">—</div></div>
-      <div class="kv" id="metricsRow" style="display:none"><div class="k">Metrics</div><div class="v" id="metrics">—</div></div>
-      <div class="kv" id="basisRow" style="display:none"><div class="k">Basis</div><div class="v" id="basis">—</div></div>
-      <div class="kv"><div class="k">Signature</div><div class="v"><code id="sigcode">—</code></div></div>
-      <div class="kv"><div class="k">Verify</div>
+      <div class="kv"><div class="k">Policy</div><div class="v" id="policy">—</div></div>
+      <div class="kv"><div class="k">Signals</div><div class="v" id="signals">—</div></div>
+      <div class="kv" id="dialsRow" style="display:none"><div class="k">Dials (q8)</div>
+        <div class="v" id="dials">
+          <div class="dialrow">
+            <span class="chip">∂Φ/∂κ: <b id="grad">—</b></span>
+            <span class="chip">d²Φ/dt²: <b id="curv">—</b></span>
+            <span class="chip">freshness: <b id="fresh">—</b></span>
+          </div>
+          <div class="small" style="margin-top:6px">q8 maps [-1..+1] → [0..255], 128 ≈ 0</div>
+        </div>
+      </div>
+      <div class="kv"><div class="k">Guards</div><div class="v" id="guards">—</div></div>
+      <div class="kv" id="sigRow" style="display:none"><div class="k">Signature</div><div class="v"><code id="sigcode">—</code></div></div>
+      <div class="kv">
+        <div class="k">Actions</div>
         <div class="v">
           <div class="btnrow">
-            <button id="verifyBtn" class="btn primary">Verify signature</button>
+            <button id="verifyBtn" class="btn primary" disabled>Verify signature</button>
             <a id="downloadBtn" class="btn secondary" download>Download JSON</a>
             <button id="copyBtn" class="btn secondary">Copy link</button>
           </div>
@@ -129,33 +134,27 @@
         <label class="small">Source</label>
         <select id="sourceSel">
           <option value="latest">Latest (receipt.latest.json)</option>
-          <option value="pick">Pick from index (if present)</option>
           <option value="custom">Enter path</option>
         </select>
 
         <div id="customWrap" style="display:none;margin-top:10px">
           <label class="small">Path (relative to /docs/)</label>
-          <input type="text" id="customPath" placeholder="receipts/amber/ar_2025-...json" />
+          <input type="text" id="customPath" placeholder="receipts/demo/2025-...json" />
           <div class="btnrow" style="margin-top:8px"><button id="loadCustom" class="btn secondary">Load</button></div>
-        </div>
-
-        <div id="indexWrap" style="display:none;margin-top:10px">
-          <div class="small">If <code>receipts/index.json</code> exists, recent items appear below.</div>
-          <div class="list" id="list"></div>
         </div>
 
         <div class="sep"></div>
         <strong>Public key</strong>
-        <div class="small" id="pkHelp">We look for <code>issuer.pub.json</code> (ed25519 hex). If missing, we’ll show how to add it.</div>
+        <div class="small" id="pkHelp">Optional: add <code>docs/issuer.pub.json</code> (ed25519 hex) to enable “Verify”.</div>
       </div>
 
       <div class="box" style="margin-top:12px">
         <strong>What the badges mean</strong>
         <div class="small" style="margin-top:6px">
-          <b>Amber</b>: uncertain case captured (no content, just facts).<br/>
-          <b>Eval</b>: a variant test ran on the Amber case.<br/>
-          <b>Label</b>: human/tool adjudication.<br/>
-          <b>Gold</b>: safe to train on (policy checks pass).
+          <b>Green</b>: within thresholds.<br/>
+          <b>Amber</b>: uncertain or approaching limits (dials show).<br/>
+          <b>Red</b>: guardrails tripped (stop/route).<br/>
+          <span class="small">Eval/Label/Gold are optional follow-ups in your pipeline.</span>
         </div>
       </div>
     </aside>
@@ -163,7 +162,7 @@
 </div>
 
 <script>
-/* tweetnacl (ed25519) for signature verify */
+/* Optional ed25519 verify (JCS-ish JSON) */
 const loadNaCl = () => new Promise((res, rej) => {
   const s=document.createElement('script');
   s.src='https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl-fast.min.js';
@@ -173,159 +172,25 @@ const loadNaCl = () => new Promise((res, rej) => {
 });
 
 const $ = (id)=>document.getElementById(id);
-const state = { receipt:null, pubkeyHex:null, base:'', index:null, currentHref:null };
+const state = { receipt:null, pubkeyHex:null, base:'', currentHref:null };
 
-/* ---------- UI helpers ---------- */
-function setBadgePill(el, badge, kind){
+/* --- helpers --- */
+function setBadgePill(el, status){
   el.className = 'pill';
-  const map = {green:'badge-green', amber:'badge-amber', gold:'badge-gold', eval:'badge-eval', label:'badge-label'};
-  if(map[badge]) el.classList.add(map[badge]);
-  el.textContent = (badge||'—').toUpperCase() + (kind?` • ${kind}`:'');
+  const map = {green:'badge-green', amber:'badge-amber', red:'badge-red'};
+  if(map[status]) el.classList.add(map[status]);
+  el.textContent = status ? status.toUpperCase() : '—';
 }
-
 function fmtWhen(s){
   if(!s) return '—';
   const d = /^\d+$/.test(String(s)) ? new Date(Number(s)*1000) : new Date(s);
   return d.toLocaleString();
 }
-
-function fillStory(rec){
-  const badge = rec?.what?.badge || '—';
-  const kind  = rec?.what?.kind  || '';
-  const storyCard = $('storyCard');
-  storyCard.className = 'card story ' + (badge || '');
-  setBadgePill($('summaryPill'), badge, kind);
-
-  let what='—', why='—', next=null;
-
-  if (badge==='amber'){
-    const whyFlags = (rec.flags||[]).join(', ') || 'uncertain';
-    what = `We captured an uncertain case (${whyFlags}). No prompts or content saved—just tiny facts.`;
-    why  = `Amber routes tricky cases to experiments so we learn without training on junk.`;
-    next = `Run one or two variants (Eval), then add a Label. If settled, promote to Gold.`;
-  } else if (badge==='eval'){
-    const model = rec.variant?.model || 'a variant';
-    const passed = (rec.tests||[]).filter(t=>t.pass).map(t=>t.name).join(', ') || 'no tests passed';
-    what = `We tested ${model} on the Amber case.`;
-    why  = `Shows which variant behaves better on this case (passed: ${passed}).`;
-    next = `If consistent and safe, request a Label → then promote to Gold.`;
-  } else if (badge==='label'){
-    const verdict = rec.label?.verdict || 'reviewed';
-    what = `A reviewer adjudicated this case: ${verdict}.`;
-    why  = `Labels let us train on resolved truths, not guesses.`;
-    next = `If policy checks pass, promote to Gold (training).`;
-  } else if (badge==='gold'){
-    const labelRef = rec.basis?.label_ref ? `label ${rec.basis.label_ref}` : 'policy checks';
-    const checks = rec.policy_checks ? Object.entries(rec.policy_checks).map(([k,v])=>`${k}:${v}`).join(', ') : '—';
-    what = `This case graduated to Gold (training). Basis: ${labelRef}.`;
-    why  = `Gold = safe to train on. Provenance is portable. Checks → ${checks}.`;
-    next = null;
-  } else {
-    what = `Receipt loaded.`;
-    why  = `Use the buttons to verify the signature locally.`;
-  }
-
-  $('summaryWhat').textContent = what;
-  $('summaryWhy').textContent  = why;
-  if(next){ $('summaryNextRow').style.display='grid'; $('summaryNext').textContent=next; }
-  else { $('summaryNextRow').style.display='none'; }
-}
-
-function render(rec){
-  state.receipt = rec;
-  $('rid').textContent = rec.rid || '—';
-  setBadgePill($('pill'), rec.what?.badge, rec.what?.kind);
-  $('when').textContent   = fmtWhen(rec.when);
-  $('issuer').textContent = rec.issuer || '—';
-  $('kind').textContent   = rec.what?.kind || '—';
-  $('flags').textContent  = (rec.flags && rec.flags.length)? rec.flags.join(', ') : '—';
-  $('sigcode').textContent = (rec.sig||'').slice(0,24)+'…';
-
-  // Optional sections
-  if(rec.metrics){
-    $('metricsRow').style.display='grid';
-    $('metrics').textContent = Object.entries(rec.metrics).map(([k,v])=>`${k}=${v}`).join(' · ');
-  } else $('metricsRow').style.display='none';
-
-  if(rec.basis || rec.policy_checks){
-    $('basisRow').style.display='grid';
-    const b1 = rec.basis? Object.entries(rec.basis).map(([k,v])=>`${k}=${Array.isArray(v)?v.join('|'):v}`).join(' · ') : '';
-    const b2 = rec.policy_checks? ' | checks: ' + Object.entries(rec.policy_checks).map(([k,v])=>`${k}:${v}`).join(', ') : '';
-    $('basis').textContent = (b1+b2).replace(/^ \| /,'') || '—';
-  } else $('basisRow').style.display='none';
-
-  // Buttons
-  $('verifyStatus').textContent='';
-  const dl = $('downloadBtn'); dl.href = state.currentHref || (state.base + 'receipt.latest.json');
-  $('copyBtn').onclick = () => {
-    navigator.clipboard.writeText(dl.href).then(()=>{
-      $('verifyStatus').textContent='Link copied.';
-    });
-  };
-
-  // Story box
-  fillStory(rec);
-}
-
-/* ---------- Data loading ---------- */
-async function fetchJSON(path){
-  const r = await fetch(path, {cache:'no-store'});
-  if(!r.ok) throw new Error('Failed to load '+path);
-  return await r.json();
-}
-async function loadLatest(){
-  const href = state.base + 'receipt.latest.json';
-  state.currentHref = href;
-  const rec = await fetchJSON(href);
-  render(rec);
-}
-async function loadCustomPath(p){
-  const href = state.base + p.replace(/^\/?/,'');
-  state.currentHref = href;
-  const rec = await fetchJSON(href);
-  render(rec);
-}
-async function tryLoadIndex(){
-  try{
-    const idx = await fetchJSON(state.base + 'receipts/index.json');
-    state.index = idx;
-    const list = $('list'); list.innerHTML='';
-    ['amber','eval','label','promote'].forEach(group=>{
-      if(idx[group]?.length){
-        const h = document.createElement('div'); h.className='small'; h.style.margin='6px 0 4px'; h.textContent = group.toUpperCase();
-        list.appendChild(h);
-        idx[group].slice(0,10).forEach(item=>{
-          const row = document.createElement('div'); row.className='item';
-          const left = document.createElement('div'); left.textContent = item.rid || item.path;
-          const right = document.createElement('div'); right.className='tag'; right.textContent = item.when || '';
-          row.appendChild(left); row.appendChild(right);
-          row.onclick = ()=> loadCustomPath(item.path);
-          list.appendChild(row);
-        });
-      }
-    });
-  }catch(_){ /* no index */ }
-}
-async function tryLoadPub(){
-  try{
-    const pub = await fetchJSON(state.base + 'issuer.pub.json');
-    if(!pub.ed25519_public_key_hex) throw 0;
-    state.pubkeyHex = pub.ed25519_public_key_hex.replace(/^0x/,'');
-    $('pkHelp').innerHTML = `Public key loaded ✅ <code>${pub.ed25519_public_key_hex.slice(0,12)}…</code>`;
-  }catch(_){
-    state.pubkeyHex=null;
-    $('pkHelp').innerHTML = `Missing public key. Add <code>docs/issuer.pub.json</code> like:<br>
-<code>{ "issuer": "did:web:openline.local", "ed25519_public_key_hex": "ABCDEF..." }</code>`;
-  }
-}
-
-/* ---------- Verify ---------- */
+function q8byteToFloat(b){ const x=(Number(b)-128)/127; return Math.max(-1, Math.min(1, x)); }
 function sortKeysDeep(obj){
   if(Array.isArray(obj)) return obj.map(sortKeysDeep);
   if(obj && typeof obj==='object'){
-    const out={};
-    Object.keys(obj).sort().forEach(k=>{ out[k]=sortKeysDeep(obj[k]); });
-    return out;
+    const out={}; Object.keys(obj).sort().forEach(k=>out[k]=sortKeysDeep(obj[k])); return out;
   }
   return obj;
 }
@@ -335,31 +200,141 @@ function hexToBytes(h){
   for(let i=0;i<arr.length;i++) arr[i]=parseInt(s.substr(i*2,2),16)||0;
   return arr;
 }
-async function verify(){
-  const el = $('verifyStatus');
-  el.textContent = 'Verifying…';
+
+/* --- story --- */
+function fillStory(rec){
+  const status = String(rec?.attrs?.status||'').toLowerCase();
+  const storyCard = $('storyCard'); storyCard.className = 'card story ' + (status||'');
+  setBadgePill($('summaryPill'), status);
+
+  let what='—', why='—', next=null;
+  if(status==='green'){ what='Guardrails within thresholds.'; why='Stable operation (no action needed).'; }
+  else if(status==='amber'){
+    what='We captured an uncertain/approaching-limit case (no prompts or content saved—just tiny facts).';
+    why='Amber routes tricky cases to experiments so we learn without training on junk.';
+    next='Run a quick eval or label pass; if resolved, promote to Gold in your pipeline.';
+  } else if(status==='red'){
+    what='Guardrails tripped (stop or route).';
+    why='Protects integrity: fix inputs or structure, then re-run.';
+    next='Reduce κ or drift; add evidence; retry.';
+  } else { what='Receipt loaded.'; why='Use Download to inspect the raw JSON.'; }
+  $('summaryWhat').textContent=what; $('summaryWhy').textContent=why;
+  if(next){ $('summaryNextRow').style.display='grid'; $('summaryNext').textContent=next; }
+  else { $('summaryNextRow').style.display='none'; }
+}
+
+/* --- render --- */
+function render(rec){
+  state.receipt=rec;
+  const status = String(rec?.attrs?.status||'').toLowerCase();
+  const runId  = rec?.attrs?.run_id || rec?.rid || '—';
+  const ts     = rec?.attrs?.ts || rec?.when;
+  const pol    = rec?.policy || {};
+  const sigHex = rec?.sig;
+
+  $('rid').textContent = runId;
+  setBadgePill($('pill'), status);
+  $('when').textContent = fmtWhen(ts);
+  $('issuer').textContent = rec?.issuer || 'openline-demo';
+  $('policy').textContent = pol?.policy_id ? `${pol.policy_id}${pol.policy_hash?' · '+pol.policy_hash.slice(0,14)+'…':''}` : '—';
+
+  // signals
+  const s = rec?.signals || {};
+  const sigParts = [];
+  if(Number.isFinite(+s.kappa)) sigParts.push(`κ=${(+s.kappa).toFixed(3)}`);
+  if(Number.isFinite(+s.dhol))  sigParts.push(`Δhol=${(+s.dhol).toFixed(3)}`);
+  if(Number.isFinite(+s.evidence_strength)) sigParts.push(`ES=${(+s.evidence_strength).toFixed(2)}`);
+  $('signals').textContent = sigParts.length? sigParts.join(' · ') : '—';
+
+  // dials only on non-green
+  const d = rec?.telem?.dials || {};
+  if(status!=='green' && 'dphi_dk_q8' in d && 'd2phi_dt2_q8' in d && 'fresh_ratio_q8' in d){
+    $('dialsRow').style.display='grid';
+    $('grad').textContent  = q8byteToFloat(d.dphi_dk_q8).toFixed(2);
+    $('curv').textContent  = q8byteToFloat(d.d2phi_dt2_q8).toFixed(2);
+    $('fresh').textContent = q8byteToFloat(d.fresh_ratio_q8).toFixed(2);
+  } else { $('dialsRow').style.display='none'; }
+
+  // guards
+  const g = rec?.guards || {};
+  const guardParts = [];
+  if(Number.isFinite(+g.ucr))           guardParts.push(`UCR=${(+g.ucr).toFixed(2)}`);
+  if(Number.isFinite(+g.cycles))        guardParts.push(`cycles=${g.cycles}`);
+  if(Number.isFinite(+g.contradictions))guardParts.push(`X=${g.contradictions}`);
+  $('guards').textContent = guardParts.length? guardParts.join(' · ') : '—';
+
+  // signature (optional)
+  const hasSig = typeof sigHex === 'string' && sigHex.length >= 8;
+  $('sigRow').style.display = hasSig ? 'grid':'none';
+  $('verifyBtn').disabled   = true;
+  $('verifyStatus').textContent = '';
+  if(hasSig){
+    $('sigcode').textContent = sigHex.slice(0, 32)+'…';
+    $('verifyBtn').disabled = !state.pubkeyHex; // enable only if key is loaded
+  }
+
+  // buttons
+  const dl = $('downloadBtn');
+  dl.href = state.currentHref || (state.base + 'receipt.latest.json');
+  $('copyBtn').onclick = ()=>{
+    navigator.clipboard.writeText(dl.href).then(() => $('verifyStatus').textContent='Link copied.');
+  };
+
+  // story
+  fillStory(rec);
+}
+
+/* --- data --- */
+async function fetchJSON(path){
+  const r = await fetch(path, {cache:'no-store'}); if(!r.ok) throw new Error('Failed '+path);
+  return await r.json();
+}
+async function loadLatest(){
+  const href = state.base + 'receipt.latest.json';
+  state.currentHref=href; const rec = await fetchJSON(href); render(rec);
+}
+async function loadCustomPath(p){
+  const href = state.base + p.replace(/^\/?/,''); state.currentHref=href;
+  const rec = await fetchJSON(href); render(rec);
+}
+async function tryLoadPub(){
+  try{
+    const pub = await fetchJSON(state.base + 'issuer.pub.json');
+    if(!pub.ed25519_public_key_hex) throw 0;
+    state.pubkeyHex = pub.ed25519_public_key_hex.replace(/^0x/,'');
+    $('pkHelp').innerHTML = `Public key loaded ✅ <code>${pub.ed25519_public_key_hex.slice(0,12)}…</code>`;
+  }catch(_){
+    state.pubkeyHex=null;
+    $('pkHelp').innerHTML = `Optional: add <code>docs/issuer.pub.json</code> like:<br>
+<code>{ "issuer": "did:web:openline.local", "ed25519_public_key_hex": "ABCDEF..." }</code>`;
+  }
+}
+
+/* --- verify --- */
+$('verifyBtn').onclick = async ()=>{
+  const el = $('verifyStatus'); el.textContent='Verifying…';
+  const rec = JSON.parse(JSON.stringify(state.receipt||{}));
+  if(!rec.sig){ el.innerHTML = '<span class="err">No signature on receipt.</span>'; return; }
   if(!state.pubkeyHex){ el.innerHTML = '<span class="err">No public key loaded.</span>'; return; }
-  const rec = {...state.receipt}; if(!rec || !rec.sig){ el.innerHTML = '<span class="err">No signature found.</span>'; return; }
   const sigHex = rec.sig; delete rec.sig;
-  const canonical = JSON.stringify(sortKeysDeep(rec)); // JCS-ish
+  const canonical = JSON.stringify(sortKeysDeep(rec));
   try{
     await loadNaCl();
-    const msg = new TextEncoder().encode(canonical);
-    const sig = hexToBytes(sigHex);
-    const pk  = hexToBytes(state.pubkeyHex);
-    const ok  = window.nacl.sign.detached.verify(msg, sig, pk);
+    const ok = window.nacl.sign.detached.verify(
+      new TextEncoder().encode(canonical),
+      hexToBytes(sigHex),
+      hexToBytes(state.pubkeyHex)
+    );
     el.innerHTML = ok ? '<span class="good">Signature valid ✔</span>' : '<span class="err">Signature failed ✖</span>';
   }catch(e){
     el.innerHTML = '<span class="err">Verify error: '+(e.message||e)+'</span>';
   }
-}
+};
 
-/* ---------- UI events ---------- */
-$('verifyBtn').onclick = verify;
+/* --- UI events --- */
 $('sourceSel').onchange = (e)=>{
   const v=e.target.value;
   $('customWrap').style.display = v==='custom'?'block':'none';
-  $('indexWrap').style.display  = v==='pick'  ?'block':'none';
   if(v==='latest') loadLatest().catch(()=>{});
 };
 $('loadCustom').onclick = ()=>{
@@ -367,14 +342,12 @@ $('loadCustom').onclick = ()=>{
   if(p) loadCustomPath(p);
 };
 
-/* ---------- boot ---------- */
+/* --- boot --- */
 (async function init(){
-  state.base = ''; // files live alongside this page (GitHub Pages /docs)
+  state.base=''; // files live alongside this page
   await tryLoadPub();
-  await tryLoadIndex();
   await loadLatest().catch(err=>{
-    render({rid:'—',when:null,issuer:'—',what:{badge:'amber',kind:'case'},flags:['—'],sig:''});
-    $('verifyStatus').innerHTML = '<span class="err">Could not load receipt.latest.json</span>';
+    render({attrs:{status:'amber',ts:null,run_id:'—'},policy:{},signals:{},guards:{}});
     console.warn(err);
   });
 })();
