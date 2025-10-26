@@ -1,0 +1,27 @@
+{
+  "digests": {
+    "claim_graph_hash": "sha256:abc"
+  },
+  "flags": [
+    "amber:unconfirmed",
+    "route:experiment"
+  ],
+  "issuer": "did:web:openline.local",
+  "kid": "dev-1",
+  "metrics": {
+    "motif_distance": 0.61,
+    "unconfirmed_ratio": 0.42
+  },
+  "rid": "ar_2025-10-26T23-56-15Z_2975",
+  "schema": "olr/ar.v0.1",
+  "sig": "f374ee39cc05a7428c8453389ca7227ad6503d53d2ab14aab0991c5d7ce250f4b500f10f09765f0f5daca377f19bbabd2dac1c15cbcd2000b3f7d4723d36e307",
+  "what": {
+    "badge": "amber",
+    "kind": "case"
+  },
+  "when": "2025-10-26T23:56:15Z",
+  "where": {
+    "coarse": "device:server",
+    "host": "api"
+  }
+}
