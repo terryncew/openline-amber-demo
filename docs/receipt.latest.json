@@ -1,24 +1,31 @@
 {
-  "basis": {
-    "eval_refs": [
-      "evr_2025-10-08T21-05-53Z_7553"
-    ],
-    "label_ref": "lbr_2025-10-08T21-05-53Z_7553",
-    "policy": "superego.v0.3"
+  "receipt_version": "olr/1.5",
+  "attrs": {
+    "status": "amber",
+    "ts": "2025-10-01T12:00:00Z",
+    "run_id": "amber-demo-001"
   },
-  "issuer": "did:web:openline.local",
-  "kid": "dev-1",
-  "parent": "ar_2025-10-08T21-05-53Z_7553",
-  "policy_checks": {
-    "consent": "pass",
-    "pii": "pass"
+  "policy": {
+    "policy_id": "openline/policy.v1",
+    "policy_hash": "sha256:6babccff24555fa448e5d0dcfd9c1404cd1d1e8c6ca7c151bc675fd7235f8ed6"
   },
-  "rid": "gpr_2025-10-08T21-05-53Z_7553",
-  "schema": "olr/gpr.v0.1",
-  "sig": "f641b48cd29c4a5de9650007db02431926a0cea990897ea954eaa0dd5385bf87e87f29dbe09a8d717f51580d00c94217e5bc51da82f08382d0fe51cbec108509",
-  "what": {
-    "badge": "gold",
-    "kind": "promotion"
+  "signals": {
+    "kappa": 0.82,
+    "dhol": 0.22,
+    "evidence_strength": 0.41
   },
-  "when": "2025-10-08T21:05:53Z"
+  "guards": {
+    "ucr": 0.27,
+    "cycles": 0,
+    "contradictions": 0
+  },
+  "telem": {
+    "dials": {
+      "dphi_dk_q8": 148,
+      "d2phi_dt2_q8": 112,
+      "fresh_ratio_q8": 164,
+      "scale": "q8_signed",
+      "description": "q8_signed maps [-1..+1] -> [0..255], 128 ≈ 0"
+    }
+  }
 }
