@@ -1,24 +1,12 @@
 {
-  "basis": {
-    "eval_refs": [
-      "evr_2025-10-27T00-09-44Z_3784"
-    ],
-    "label_ref": "lbr_2025-10-27T00-09-44Z_3784",
-    "policy": "superego.v0.3"
-  },
+  "receipt_version": "olr/1.5",
   "issuer": "did:web:openline.local",
-  "kid": "dev-1",
-  "parent": "ar_2025-10-27T00-09-44Z_3784",
-  "policy_checks": {
-    "consent": "pass",
-    "pii": "pass"
+  "attrs": { "status": "amber", "ts": "2025-10-26T23:59:00Z", "run_id": "demo-001" },
+  "policy": {
+    "policy_id": "openline/policy.v1",
+    "policy_hash": "sha256:6babccff24555fa448e5d0dcfd9c1404cd1d1e8c6ca7c151bc675fd7235f8ed6"
   },
-  "rid": "gpr_2025-10-27T00-09-44Z_3784",
-  "schema": "olr/gpr.v0.1",
-  "sig": "f0ce175c3c8774efedbc3a7546fd1cafefd6314e61b9effa8621d961500a91c6d4ab736f4f01a3d1b29f2120bb6ce294539523b0bcc36cc3085ea8f183256501",
-  "what": {
-    "badge": "gold",
-    "kind": "promotion"
-  },
-  "when": "2025-10-27T00:09:44Z"
+  "signals": { "kappa": 0.82, "dhol": 0.22, "evidence_strength": 0.41 },
+  "telem": { "dials": { "dphi_dk_q8": 148, "d2phi_dt2_q8": 112, "fresh_ratio_q8": 164 } },
+  "guards": { "ucr": 0.37, "cycles": 0, "contradictions": 0 }
 }
