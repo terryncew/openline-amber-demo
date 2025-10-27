@@ -1,24 +1,19 @@
 {
-  "basis": {
-    "eval_refs": [
-      "evr_2025-10-27T00-30-33Z_5033"
-    ],
-    "label_ref": "lbr_2025-10-27T00-30-33Z_5033",
-    "policy": "superego.v0.3"
+  "receipt_version": "olr/1.5",
+  "attrs": { "status": "amber", "ts": "2025-10-01T12:00:00Z", "run_id": "demo-001" },
+  "policy": {
+    "policy_id": "openline/policy.v1",
+    "policy_hash": "sha256:6babccff24555fa448e5d0dcfd9c1404cd1d1e8c6ca7c151bc675fd7235f8ed6"
   },
-  "issuer": "did:web:openline.local",
-  "kid": "dev-1",
-  "parent": "ar_2025-10-27T00-30-33Z_5033",
-  "policy_checks": {
-    "consent": "pass",
-    "pii": "pass"
+  "signals": { "phi_star": 0.68, "kappa": 0.82, "dhol": 0.22 },
+  "telem": {
+    "dials": {
+      "dphi_dk_q8": 148,
+      "d2phi_dt2_q8": 112,
+      "fresh_ratio_q8": 164,
+      "scale": "q8_signed",
+      "description": "q8 maps [-1..+1] → [0..255], 128≈0"
+    }
   },
-  "rid": "gpr_2025-10-27T00-30-33Z_5033",
-  "schema": "olr/gpr.v0.1",
-  "sig": "5f5639d8ffaa9d9ab9c91af86674ef0bcb00a993a56f70ebcfcabda011e874585cdf8f59de91722b79fa9b98448c40e75c34f926fe75c8c947e3ded2e22fdc06",
-  "what": {
-    "badge": "gold",
-    "kind": "promotion"
-  },
-  "when": "2025-10-27T00:30:33Z"
+  "guards": { "ucr": 0.18, "cycles": 0, "contradictions": 0 }
 }
