@@ -1,0 +1,23 @@
+{
+  "issuer": "did:web:openline.local",
+  "kid": "dev-1",
+  "label": {
+    "rater": {
+      "rep": 0.7,
+      "role": "reviewer"
+    },
+    "reason_codes": [
+      "retrieval-agreement"
+    ],
+    "verdict": "correct"
+  },
+  "parent": "ar_2025-10-27T00-13-33Z_4013",
+  "rid": "lbr_2025-10-27T00-13-33Z_4013",
+  "schema": "olr/lbr.v0.1",
+  "sig": "f4d74a8e255d0f68a150e26356838e742f4dbc41e45a6dcdcc14f29807e9f322d2acac5a03065570768d2908d9469e2027a60ad82ff96eb86c99472f81dc730f",
+  "what": {
+    "badge": "label",
+    "kind": "adjudication"
+  },
+  "when": "2025-10-27T00:13:33Z"
+}
