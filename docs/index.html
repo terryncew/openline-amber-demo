@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Receipts Viewer — OLR/1.5</title>
+<title>Receipts Viewer — OLR/1.5 (back-compat)</title>
 <meta name="color-scheme" content="dark">
 <style>
   :root{
     --bg:#0b0c0f; --card:#10131a; --muted:#94a3b8; --text:#e5e7eb;
-    --ok:#16a34a; --warn:#f59e0b; --gold:#d4af37; --err:#ef4444; --accent:#60a5fa;
+    --ok:#16a34a; --warn:#f59e0b; --red:#ef4444; --accent:#60a5fa;
     --border:#1f2632; --pill:#0f1720; --shadow:0 10px 28px rgba(0,0,0,.28);
   }
   *{box-sizing:border-box}
@@ -20,7 +20,6 @@
   .sub{color:var(--muted);font-size:14px}
   .hero{background:linear-gradient(180deg,rgba(96,165,250,.14),transparent 60%);
     border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin:8px 0 16px}
-  .hero b{color:#cfe1ff}
   .grid{display:grid;grid-template-columns:1fr;gap:16px}
   @media(min-width:940px){.grid{grid-template-columns:1.1fr 340px}}
   .card{background:var(--card);border:1px solid var(--border);
@@ -46,17 +45,12 @@
   .btn.primary{background:#1e40af;border-color:#1e3a8a}
   .btn.secondary{background:#0f172a;border-color:#233044}
   .btn:disabled{opacity:.5;cursor:not-allowed}
-  .good{color:#86efac}.warnc{color:#fde68a}.err{color:#fb7185}
   .side{position:sticky;top:18px}
   .box{background:var(--card);border:1px solid var(--border);
     border-radius:14px;padding:14px}
   .small{font-size:12px;color:var(--muted)}
   select,input[type="text"]{width:100%;background:#0b1220;border:1px solid #253041;
     color:#e5e7eb;border-radius:10px;padding:12px 12px;font-size:14px}
-  .list{margin-top:10px;display:flex;flex-direction:column;gap:8px}
-  .item{display:flex;justify-content:space-between;align-items:center;
-    padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#0c121a}
-  .tag{font-size:11px;padding:2px 8px;border:1px solid #334155;border-radius:999px;color:#cbd5e1}
   .sep{height:1px;background:var(--border);margin:14px 0}
   a{color:var(--accent);text-decoration:none}
   .story{border-left:4px solid #334155}
@@ -72,14 +66,13 @@
   <header>
     <div>
       <h1>Receipts Viewer</h1>
-      <div class="sub">OLR/1.5 · Amber → (optional) Eval/Label → Gold</div>
+      <div class="sub">OLR/1.5 · backward-compatible</div>
     </div>
     <div class="sub">Portable proof. No prompts or PII.</div>
   </header>
 
   <div class="hero">
-    <p><b>How this helps:</b> We turn uncertain cases into training data you can trust. Each step emits a tiny signed receipt you can verify offline.</p>
-    <p style="margin-top:8px"><b>3-step demo:</b> 1) Load the latest receipt. 2) (Optional) Verify sig if present. 3) Read the story box.</p>
+    <p><b>3-step demo:</b> 1) Load the latest receipt. 2) (Optional) Verify signature if present. 3) Read the story box.</p>
   </div>
 
   <!-- Story -->
@@ -139,7 +132,7 @@
 
         <div id="customWrap" style="display:none;margin-top:10px">
           <label class="small">Path (relative to /docs/)</label>
-          <input type="text" id="customPath" placeholder="receipts/demo/2025-...json" />
+          <input type="text" id="customPath" placeholder="receipts/demo/2025-…json" />
           <div class="btnrow" style="margin-top:8px"><button id="loadCustom" class="btn secondary">Load</button></div>
         </div>
 
@@ -153,8 +146,7 @@
         <div class="small" style="margin-top:6px">
           <b>Green</b>: within thresholds.<br/>
           <b>Amber</b>: uncertain or approaching limits (dials show).<br/>
-          <b>Red</b>: guardrails tripped (stop/route).<br/>
-          <span class="small">Eval/Label/Gold are optional follow-ups in your pipeline.</span>
+          <b>Red</b>: guardrails tripped (stop/route).
         </div>
       </div>
     </aside>
@@ -162,7 +154,7 @@
 </div>
 
 <script>
-/* Optional ed25519 verify (JCS-ish JSON) */
+/* tweetnacl (ed25519) for signature verify */
 const loadNaCl = () => new Promise((res, rej) => {
   const s=document.createElement('script');
   s.src='https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl-fast.min.js';
@@ -174,7 +166,7 @@ const loadNaCl = () => new Promise((res, rej) => {
 const $ = (id)=>document.getElementById(id);
 const state = { receipt:null, pubkeyHex:null, base:'', currentHref:null };
 
-/* --- helpers --- */
+/* ---------- helpers ---------- */
 function setBadgePill(el, status){
   el.className = 'pill';
   const map = {green:'badge-green', amber:'badge-amber', red:'badge-red'};
@@ -201,18 +193,57 @@ function hexToBytes(h){
   return arr;
 }
 
-/* --- story --- */
-function fillStory(rec){
-  const status = String(rec?.attrs?.status||'').toLowerCase();
+/* ---------- back-compat mappers ---------- */
+function pickStatus(rec){
+  return String(
+    rec?.attrs?.status ??
+    rec?.what?.badge ??
+    rec?.status ??
+    ''
+  ).toLowerCase();
+}
+function pickRunId(rec){
+  return rec?.attrs?.run_id ?? rec?.rid ?? '—';
+}
+function pickTs(rec){
+  return rec?.attrs?.ts ?? rec?.when ?? rec?.t ?? null;
+}
+function pickSignals(rec){
+  // OLR/1.5
+  const s = rec?.signals;
+  if (s && (('kappa' in s) || ('dhol' in s) || ('evidence_strength' in s))) return {
+    kappa: s.kappa, dhol: s.dhol, es: s.evidence_strength
+  };
+  // Legacy: metrics or openline_frame.telem
+  const m = rec?.metrics || rec?.openline_frame?.telem || {};
+  return {
+    kappa: m.kappa ?? m.kappa_eff ?? m.k,
+    dhol:  m.dhol  ?? m.delta_hol,
+    es:    m.evidence_strength ?? m.es
+  };
+}
+function pickGuards(rec){
+  // OLR/1.5
+  const g = rec?.guards;
+  if (g && (('ucr' in g) || ('cycles' in g) || ('contradictions' in g))) return {
+    ucr:g.ucr, cycles:g.cycles, X:g.contradictions
+  };
+  // Legacy: digest (cycle_plus, x_frontier)
+  const d = rec?.digest || rec?.openline_frame?.digest || {};
+  return { ucr:d.ucr, cycles:d.cycle_plus, X:d.x_frontier };
+}
+
+/* ---------- story ---------- */
+function fillStory(status){
   const storyCard = $('storyCard'); storyCard.className = 'card story ' + (status||'');
   setBadgePill($('summaryPill'), status);
 
   let what='—', why='—', next=null;
   if(status==='green'){ what='Guardrails within thresholds.'; why='Stable operation (no action needed).'; }
   else if(status==='amber'){
-    what='We captured an uncertain/approaching-limit case (no prompts or content saved—just tiny facts).';
+    what='Uncertain / approaching-limit case captured (no prompts or content saved—just tiny facts).';
     why='Amber routes tricky cases to experiments so we learn without training on junk.';
-    next='Run a quick eval or label pass; if resolved, promote to Gold in your pipeline.';
+    next='Run a quick eval/label; if resolved, promote to training.';
   } else if(status==='red'){
     what='Guardrails tripped (stop or route).';
     why='Protects integrity: fix inputs or structure, then re-run.';
@@ -223,12 +254,13 @@ function fillStory(rec){
   else { $('summaryNextRow').style.display='none'; }
 }
 
-/* --- render --- */
+/* ---------- render ---------- */
 function render(rec){
   state.receipt=rec;
-  const status = String(rec?.attrs?.status||'').toLowerCase();
-  const runId  = rec?.attrs?.run_id || rec?.rid || '—';
-  const ts     = rec?.attrs?.ts || rec?.when;
+
+  const status = pickStatus(rec);
+  const runId  = pickRunId(rec);
+  const ts     = pickTs(rec);
   const pol    = rec?.policy || {};
   const sigHex = rec?.sig;
 
@@ -238,15 +270,15 @@ function render(rec){
   $('issuer').textContent = rec?.issuer || 'openline-demo';
   $('policy').textContent = pol?.policy_id ? `${pol.policy_id}${pol.policy_hash?' · '+pol.policy_hash.slice(0,14)+'…':''}` : '—';
 
-  // signals
-  const s = rec?.signals || {};
-  const sigParts = [];
-  if(Number.isFinite(+s.kappa)) sigParts.push(`κ=${(+s.kappa).toFixed(3)}`);
-  if(Number.isFinite(+s.dhol))  sigParts.push(`Δhol=${(+s.dhol).toFixed(3)}`);
-  if(Number.isFinite(+s.evidence_strength)) sigParts.push(`ES=${(+s.evidence_strength).toFixed(2)}`);
-  $('signals').textContent = sigParts.length? sigParts.join(' · ') : '—';
+  // signals (new or legacy)
+  const S = pickSignals(rec);
+  const parts=[];
+  if(Number.isFinite(+S.kappa)) parts.push(`κ=${(+S.kappa).toFixed(3)}`);
+  if(Number.isFinite(+S.dhol))  parts.push(`Δhol=${(+S.dhol).toFixed(3)}`);
+  if(Number.isFinite(+S.es))    parts.push(`ES=${(+S.es).toFixed(2)}`);
+  $('signals').textContent = parts.length? parts.join(' · ') : '—';
 
-  // dials only on non-green
+  // dials (only on non-green; new receipts only)
   const d = rec?.telem?.dials || {};
   if(status!=='green' && 'dphi_dk_q8' in d && 'd2phi_dt2_q8' in d && 'fresh_ratio_q8' in d){
     $('dialsRow').style.display='grid';
@@ -255,13 +287,13 @@ function render(rec){
     $('fresh').textContent = q8byteToFloat(d.fresh_ratio_q8).toFixed(2);
   } else { $('dialsRow').style.display='none'; }
 
-  // guards
-  const g = rec?.guards || {};
-  const guardParts = [];
-  if(Number.isFinite(+g.ucr))           guardParts.push(`UCR=${(+g.ucr).toFixed(2)}`);
-  if(Number.isFinite(+g.cycles))        guardParts.push(`cycles=${g.cycles}`);
-  if(Number.isFinite(+g.contradictions))guardParts.push(`X=${g.contradictions}`);
-  $('guards').textContent = guardParts.length? guardParts.join(' · ') : '—';
+  // guards (new or legacy)
+  const G = pickGuards(rec);
+  const gparts=[];
+  if(Number.isFinite(+G.ucr))    gparts.push(`UCR=${(+G.ucr).toFixed(2)}`);
+  if(Number.isFinite(+G.cycles)) gparts.push(`cycles=${G.cycles}`);
+  if(Number.isFinite(+G.X))      gparts.push(`X=${G.X}`);
+  $('guards').textContent = gparts.length? gparts.join(' · ') : '—';
 
   // signature (optional)
   const hasSig = typeof sigHex === 'string' && sigHex.length >= 8;
@@ -270,21 +302,20 @@ function render(rec){
   $('verifyStatus').textContent = '';
   if(hasSig){
     $('sigcode').textContent = sigHex.slice(0, 32)+'…';
-    $('verifyBtn').disabled = !state.pubkeyHex; // enable only if key is loaded
+    $('verifyBtn').disabled = !state.pubkeyHex;
   }
 
   // buttons
   const dl = $('downloadBtn');
   dl.href = state.currentHref || (state.base + 'receipt.latest.json');
-  $('copyBtn').onclick = ()=>{
-    navigator.clipboard.writeText(dl.href).then(() => $('verifyStatus').textContent='Link copied.');
-  };
+  $('copyBtn').onclick = ()=>navigator.clipboard.writeText(dl.href)
+      .then(()=>{$('verifyStatus').textContent='Link copied.'});
 
   // story
-  fillStory(rec);
+  fillStory(status);
 }
 
-/* --- data --- */
+/* ---------- data ---------- */
 async function fetchJSON(path){
   const r = await fetch(path, {cache:'no-store'}); if(!r.ok) throw new Error('Failed '+path);
   return await r.json();
@@ -310,12 +341,12 @@ async function tryLoadPub(){
   }
 }
 
-/* --- verify --- */
+/* ---------- verify ---------- */
 $('verifyBtn').onclick = async ()=>{
   const el = $('verifyStatus'); el.textContent='Verifying…';
   const rec = JSON.parse(JSON.stringify(state.receipt||{}));
-  if(!rec.sig){ el.innerHTML = '<span class="err">No signature on receipt.</span>'; return; }
-  if(!state.pubkeyHex){ el.innerHTML = '<span class="err">No public key loaded.</span>'; return; }
+  if(!rec.sig){ el.innerHTML = '<span style="color:#fecaca">No signature on receipt.</span>'; return; }
+  if(!state.pubkeyHex){ el.innerHTML = '<span style="color:#fecaca">No public key loaded.</span>'; return; }
   const sigHex = rec.sig; delete rec.sig;
   const canonical = JSON.stringify(sortKeysDeep(rec));
   try{
@@ -325,13 +356,14 @@ $('verifyBtn').onclick = async ()=>{
       hexToBytes(sigHex),
       hexToBytes(state.pubkeyHex)
     );
-    el.innerHTML = ok ? '<span class="good">Signature valid ✔</span>' : '<span class="err">Signature failed ✖</span>';
+    el.innerHTML = ok ? '<span style="color:#86efac">Signature valid ✔</span>' :
+                        '<span style="color:#fecaca">Signature failed ✖</span>';
   }catch(e){
-    el.innerHTML = '<span class="err">Verify error: '+(e.message||e)+'</span>';
+    el.innerHTML = '<span style="color:#fecaca">Verify error: '+(e.message||e)+'</span>';
   }
 };
 
-/* --- UI events --- */
+/* ---------- UI events ---------- */
 $('sourceSel').onchange = (e)=>{
   const v=e.target.value;
   $('customWrap').style.display = v==='custom'?'block':'none';
@@ -342,12 +374,13 @@ $('loadCustom').onclick = ()=>{
   if(p) loadCustomPath(p);
 };
 
-/* --- boot --- */
+/* ---------- boot ---------- */
 (async function init(){
   state.base=''; // files live alongside this page
   await tryLoadPub();
   await loadLatest().catch(err=>{
-    render({attrs:{status:'amber',ts:null,run_id:'—'},policy:{},signals:{},guards:{}});
+    // fallback demo frame
+    render({attrs:{status:'amber',ts:null,run_id:'—'},signals:{},guards:{}});
     console.warn(err);
   });
 })();
